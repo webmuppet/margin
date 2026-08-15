@@ -14,6 +14,31 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const OPEN_LINE = /^\s*<!--\s*imark\b/
+
+/**
+ * What the document says, with the notes taken out.
+ *
+ * Comments carry their own evidence — who, when, which words — so an agent can
+ * always tell what the reviewer asked for. A direct edit carries none: the file
+ * is simply different, and nothing in it says the reviewer rather than the
+ * agent made it that way. Margin can now edit, move and delete blocks, so this
+ * is the only way to tell that any of that happened.
+ *
+ * Notes are excluded on purpose. Adding one changes the file too, and a
+ * fingerprint that counted it would report every review as edited.
+ */
+function prose(text) {
+  const lines = text.split('\n')
+  const out = []
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!OPEN_LINE.test(lines[i])) { out.push(lines[i]); continue }
+    while (i < lines.length && !lines[i].includes('-->')) i += 1
+  }
+  return out.join('\n').replace(/\s+/g, ' ').trim()
+}
+
+const fingerprint = (text) =>
+  crypto.createHash('sha256').update(prose(text)).digest('hex').slice(0, 16)
 const CLOSE_LINE = /^\s*-->\s*$/
 
 // The words the reviewer comments on to end the wait. Written into every review
@@ -380,6 +405,11 @@ function requestReview(target) {
         file: target,
         at: new Date().toISOString(),
         by: process.env.CLAUDE_CODE_ENTRYPOINT ? 'Claude Code' : 'terminal',
+        // What the document said when it was handed over, so a direct edit can
+        // be told from a note when it comes back.
+        prose: (() => {
+          try { return fingerprint(fs.readFileSync(target, 'utf8')) } catch { return null }
+        })(),
       }, null, 2)}\n`, { flag: 'wx' })
       return { file, decision: path.join(dir, `${nonce}.decision.json`) }
     } catch { /* the one-in-2⁴⁸ collision; roll again */ }
@@ -454,12 +484,48 @@ function writeEphemeral({ title, body }) {
 
 const say = (text) => process.stdout.write(`${text}\n`)
 
-function report(file, result, { ephemeral = false } = {}) {
+/**
+ * Whether the reviewer changed the document itself, not only annotated it.
+ *
+ * Reads the file as it stands now against the fingerprint taken when it was
+ * handed over. A moved block, a corrected line, a deleted paragraph — none of
+ * those leave a note behind, and before Margin could edit, none of them could
+ * happen. Now they can, and an agent told only about notes would rewrite from
+ * its own copy and throw the reviewer's corrections away without either of them
+ * noticing.
+ */
+function wasEdited(file, request) {
+  try {
+    const before = JSON.parse(fs.readFileSync(request.file, 'utf8'))?.prose
+    if (!before) return false
+    return fingerprint(fs.readFileSync(file, 'utf8')) !== before
+  } catch {
+    // The request is gone, so there is nothing to compare against. Silence is
+    // the wrong answer to that: say nothing rather than claim it was untouched.
+    return false
+  }
+}
+
+const EDITED = [
+  'THE REVIEWER ALSO EDITED THE DOCUMENT ITSELF, not only commented on it.',
+  'Blocks may have been corrected, moved or deleted, and those changes leave no',
+  'note behind. Re-read the file before you do anything with it: what is in it',
+  'now is what the reviewer wants, and your copy of it is out of date. Do not',
+  'rewrite it from memory, and do not undo an edit because no note explains it.',
+].join('\n')
+
+function report(file, result, { ephemeral = false, edited = false } = {}) {
   if (!result) return say(`No decision — the wait timed out. The document is at ${file}.`)
 
-  if (!result.approved) return say(sendBackFeedback(result, file, 'this command'))
+  if (!result.approved) {
+    if (edited) say(`${EDITED}\n`)
+    return say(sendBackFeedback(result, file, 'this command'))
+  }
 
   say('APPROVED — the reviewer accepted this.')
+  // An approval with edits in it still matters: approved means "go ahead with
+  // this", and *this* is now the edited document rather than the one sent.
+  if (edited) say(`\n${EDITED}`)
   if (result.notes.length > 0) {
     say(`\nThey still left ${result.notes.length} note(s). Act on them as you go, `
       + 'and say what you did for each.')
@@ -570,11 +636,13 @@ async function cmdReview(argv) {
   say(`Opened in Margin: ${target}\nWaiting for Approve or Send Back in the window…`)
 
   const result = await waitForDecision(target, request)
+  // Asked before the request is withdrawn: the fingerprint lives in it.
+  const edited = wasEdited(target, request)
   withdraw(request)
   // A sent-back ephemeral stays: the feedback points the agent at its notes.
   // The pending purge sweeps it up once nobody can still be reading it.
   if (ephemeral && result?.approved) fs.rmSync(target, { force: true })
-  report(target, result, { ephemeral })
+  report(target, result, { ephemeral, edited })
 }
 
 /** The ExitPlanMode gate. Off unless IMARK_PLAN_REVIEW is set: ExitPlanMode is

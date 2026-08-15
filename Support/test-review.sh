@@ -361,6 +361,75 @@ check "approve lets the agent carry on"         "$out" '"behavior":"allow"'
 refute "without asking again in the terminal"   "$out" "deny"
 
 echo
+
+# ---------------------------------------------------------------------------
+# The reviewer can now edit the document, not only annotate it. A correction, a
+# moved block, a deleted paragraph — none of them leave a note behind, and the
+# feedback is built out of notes. An agent told only about notes rewrites from
+# its own copy and throws the corrections away, with nothing on either side
+# saying so. This is the case that catches that.
+
+edited_run() {   # edited_run <decision> <what the reviewer does to the file>
+  local decision="$1" reviewer="$2"
+  local dir; dir="$(mktemp -d)"
+  cd "$dir"
+  export IMARK_PENDING_DIR="$dir/pending"
+  printf '# Plan\n\nA paragraph that is going to be reviewed.\n\nA second paragraph.\n' > SPEC.md
+
+  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/margin.mjs" review SPEC.md > out.txt 2>&1 &
+  local pid=$!
+  local request; request="$(wait_for "$IMARK_PENDING_DIR/*.json")"
+  if [[ -z "$request" ]]; then
+    kill "$pid" 2>/dev/null
+    echo "FAIL the request was never announced"
+    unset IMARK_PENDING_DIR; cd "$OLDPWD"; return 1
+  fi
+
+  # Only after the handover, which is the whole point: the fingerprint is taken
+  # when the document is handed over, and what matters is what happened since.
+  "$reviewer"
+
+  /tmp/imark-decide "$(pwd)/SPEC.md" "$decision" 1 > /dev/null
+  wait "$pid"
+  cat out.txt
+  unset IMARK_PENDING_DIR
+  cd "$OLDPWD"
+  rm -rf "$dir"
+}
+
+# What the reviewer does, as functions rather than strings: the quoting needed
+# to pass these as arguments was harder to read than the test.
+edits_the_text() {
+  perl -pi -e 's/A second paragraph\./A second paragraph, corrected by the reviewer./' SPEC.md
+}
+
+comment_only() {
+  {
+    echo
+    echo '<!-- imark quote="going to be reviewed" by="greg" at="2026-08-15T22:00Z"'
+    echo 'A note.'
+    echo '-->'
+  } >> SPEC.md
+}
+
+echo "▸ the reviewer edited the document, not only commented on it"
+out="$(edited_run request-changes edits_the_text)"
+check "the agent is told the document itself changed"  "$out" "ALSO EDITED THE DOCUMENT ITSELF"
+check "and told to re-read it"                         "$out" "Re-read the file"
+# Matched within one line: the sentence wraps after "Do not", and an
+# assertion spanning the break fails on wording that is perfectly correct.
+check "and told not to rewrite from memory"            "$out" "rewrite it from memory"
+check "the notes still come through"                   "$out" "DID NOT APPROVE"
+
+out="$(edited_run approve edits_the_text)"
+check "an approval with edits says so too"             "$out" "ALSO EDITED THE DOCUMENT ITSELF"
+check "and is still an approval"                       "$out" "APPROVED"
+
+echo "▸ and a comment is not an edit"
+out="$(edited_run request-changes comment_only)"
+refute "adding a note is not reported as editing"      "$out" "ALSO EDITED THE DOCUMENT ITSELF"
+check "while the note itself arrives"                  "$out" "A note."
+
 if [[ $fail -eq 0 ]]; then
   echo "all good ($pass)"
 else
