@@ -27,11 +27,13 @@ enum Comments {
     enum Failure: LocalizedError {
         case fileChanged
         case unreadable
+        case outOfRange
 
         var errorDescription: String? {
             switch self {
             case .fileChanged: "This file changed on disk since Imark opened it."
             case .unreadable: "Imark can't read this file as UTF-8 text."
+            case .outOfRange: "Those lines are no longer where Imark thought they were."
             }
         }
     }
@@ -42,7 +44,7 @@ enum Comments {
     private static func edit(
         _ url: URL,
         expecting stamp: Stamp?,
-        _ change: (inout [String]) -> Void
+        _ change: (inout [String]) throws -> Void
     ) throws {
         guard let source = try? String(contentsOf: url, encoding: .utf8) else {
             throw Failure.unreadable
@@ -51,8 +53,39 @@ enum Comments {
             throw Failure.fileChanged
         }
         var lines = source.components(separatedBy: "\n")
-        change(&lines)
+        try change(&lines)
         try write(lines.joined(separator: "\n"), to: url)
+    }
+
+    /// Puts edited text back over the lines it came from.
+    ///
+    /// The one write in the app that changes something other than a note, and
+    /// the only reason it is safe to have is that it goes through the same door
+    /// as the rest: read, check nobody got there first, rewrite atomically.
+    ///
+    /// Whether the edit leaves the notes in the document intact is not decided
+    /// here. The renderer owns the parser and has already refused anything that
+    /// would break one — a second opinion in Swift would be a second definition
+    /// of what a comment is, and the two would disagree the first time either
+    /// changed. What this owns is the file: that it has not moved underneath
+    /// us, and that the lines being replaced still exist.
+    static func replace(
+        lines range: Range<Int>,
+        with text: String,
+        in url: URL,
+        expecting stamp: Stamp?
+    ) throws {
+        try edit(url, expecting: stamp) { lines in
+            // A range that has run off the end means the document is not the one
+            // the ranges were derived from. The stamp normally catches that
+            // first; this is the case where the file changed and changed back to
+            // the same size and date, which is rare and silent and would
+            // otherwise write over whatever now sits at those lines.
+            guard range.lowerBound >= 0, range.upperBound <= lines.count,
+                  range.lowerBound <= range.upperBound
+            else { throw Failure.outOfRange }
+            lines.replaceSubrange(range, with: text.components(separatedBy: "\n"))
+        }
     }
 
     /// Takes a note out, along with one blank line it left behind — otherwise

@@ -17,6 +17,21 @@ public enum RendererMessage {
     case selectionCleared
     case comments(notes: [NoteSummary], reviewing: Bool)
     case noteCommand(NoteCommand)
+    case editSource(SourceEdit)
+}
+
+/// A block edited as markdown, on its way back to the file.
+///
+/// The renderer has already spliced this into its own buffer and checked that
+/// no note in the document broke — it owns the parser, so it is the only side
+/// that can tell. What arrives here is the range and the replacement, for the
+/// side that owns the file.
+public struct SourceEdit {
+    /// The lines being replaced, counting from the top of the file. End
+    /// exclusive, the way markdown-it reports them and the way every
+    /// `data-line` in the page is written.
+    public let lines: Range<Int>
+    public let text: String
 }
 
 /// A live selection in the document, and where it came from in the file.
@@ -395,6 +410,13 @@ public final class RendererView: NSView {
                     colour: body["colour"] as? String ?? "",
                     rect: NSRect(x: x, y: owner.bounds.height - y - h, width: w, height: h)
                 )))
+
+            case "editSource":
+                guard let from = body["from"] as? Int,
+                      let to = body["to"] as? Int, from <= to,
+                      let text = body["text"] as? String
+                else { break }
+                owner.onMessage?(.editSource(SourceEdit(lines: from..<to, text: text)))
 
             case "wikilinks":
                 owner.onMessage?(.wikilinks(body["targets"] as? [String] ?? []))

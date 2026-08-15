@@ -11,6 +11,8 @@ import renderMathInElement from 'katex/contrib/auto-render'
 import mermaid from 'mermaid'
 
 import wikilink from './wikilink.js'
+import { segmentsOf, spliceSegment, textOf } from './source.js'
+import { validateCommit } from './validate.js'
 import {
   attachComments,
   attached as attachedNotes,
@@ -763,6 +765,9 @@ let renderToken = 0
 
 // Kept so comments can be exported without asking Swift to hand the file back.
 let lastSource = ''
+// And the notes found in it, so an edit can be checked against the document as
+// it was rather than against a second parse that might already disagree.
+let lastComments = []
 
 async function render({ markdown, path, theme, preview, rail }) {
   const token = ++renderToken
@@ -788,6 +793,7 @@ async function render({ markdown, path, theme, preview, rail }) {
   // Taken out before parsing so the blocks can never show up as document text,
   // and blanked rather than deleted so the line map stays honest.
   const { body: clean, comments } = extractComments(body, offset)
+  lastComments = comments
 
   root.innerHTML = clean.trim()
     ? renderFrontMatter(data) + md.render(clean)
@@ -860,6 +866,49 @@ window.addEventListener(
   },
   { passive: true },
 )
+
+/* --------------------------------------------------------- source editing */
+
+/// The line ranges of the blocks currently on screen, read back out of the
+/// `data-line` the renderer stamped on them. Read from the DOM rather than kept
+/// from the parse: what is on screen is the only thing the person can point at,
+/// and a list held from the parse before would still look valid after an edit
+/// while naming the wrong lines.
+function blockRanges() {
+  const ranges = []
+  for (const child of content().children) {
+    const raw = child.getAttribute('data-line')
+    if (!raw) continue
+    const [from, to] = raw.split(',').map(Number)
+    if (Number.isFinite(from) && Number.isFinite(to)) ranges.push([from, to])
+  }
+  return ranges
+}
+
+/// Every piece of the document that can be opened as markdown.
+export function editableSegments() {
+  return segmentsOf(lastSource, blockRanges(), lastComments)
+}
+
+/// Checks an edit and, if it is safe, hands it to Swift to write.
+///
+/// Returns rather than throws, because the caller is a control in the page and
+/// what it needs is something to say. Nothing is written until the whole
+/// document has been spliced and re-parsed: an edit can split a paragraph in
+/// two or promote a line to a heading, and boundaries never survive that.
+export function commitSource(segment, text) {
+  const after = spliceSegment(lastSource, segment, text)
+  const verdict = validateCommit(lastSource, after, segment, text)
+  if (!verdict.ok) return verdict
+
+  // Unchanged is not an edit. Writing anyway would put a new timestamp on the
+  // file, trip the watcher, and land an entry on the undo stack that undoes
+  // nothing — three lies about a block somebody looked at and closed again.
+  if (after === lastSource) return { ok: true, unchanged: true }
+
+  bridge({ type: 'editSource', from: segment.from, to: segment.to, text })
+  return { ok: true }
+}
 
 /* ------------------------------------------------------------- selection */
 
@@ -1273,6 +1322,9 @@ window.imark = {
     bridge({ type: 'comments', count: items.length, reviewing: on, items })
   },
   stepNote,
+  editableSegments,
+  commitSource,
+  sourceOf: (segment) => textOf(lastSource, segment),
   exportComments: () => toVisibleText(lastSource),
   /// Opens the note that was just written, so a comment lands visibly rather
   /// than silently changing a file.

@@ -51,6 +51,7 @@ enum CommentsTest {
         try undoing()
         try staleRanges()
         try colours()
+        try replacing()
 
         try? FileManager.default.removeItem(at: folder)
         print(failures == 0 ? "\nall good" : "\n\(failures) failing")
@@ -294,6 +295,58 @@ enum CommentsTest {
               NoteColour(attribute: "chartreuse") == .standard)
         check("and neither is nothing", NoteColour(attribute: nil) == .standard)
 
+    }
+
+    // MARK: - Writing an edited block back
+
+    /// `replace` is the first write in Imark that changes something other than a
+    /// note, so what matters is that it kept every guarantee `insert` has rather
+    /// than growing a weaker set of its own on the way in.
+    static func replacing() throws {
+        print("\n▸ a block edited as markdown goes back where it came from")
+
+        let url = fixture("First.\n\nSecond.\n\nThird.\n")
+        try Comments.replace(lines: 2..<3, with: "Second, corrected.", in: url, expecting: nil)
+        var lines = read(url)
+        check("the lines it was given are the lines that changed",
+              lines[2] == "Second, corrected.", lines[2])
+        check("and nothing either side moved",
+              lines[0] == "First." && lines[4] == "Third.", lines.joined(separator: "|"))
+
+        try Comments.replace(lines: 0..<1, with: "One.\n\nTwo.", in: url, expecting: nil)
+        lines = read(url)
+        check("a replacement may be longer than what it replaces",
+              lines[0] == "One." && lines[2] == "Two.", lines.joined(separator: "|"))
+        check("and the rest of the document came with it",
+              lines.contains("Second, corrected.") && lines.contains("Third."))
+
+        try Comments.replace(lines: 0..<3, with: "", in: url, expecting: nil)
+        check("and shorter, down to nothing", read(url).first == "", read(url).joined(separator: "|"))
+
+        print("\n▸ and it refuses the same things insert refuses")
+
+        let guarded = fixture("Before.\n")
+        let stamp = Comments.Stamp(of: guarded)
+        // Same size, so only the timestamp gives it away — which is why the
+        // stamp carries both.
+        Thread.sleep(forTimeInterval: 0.01)
+        try "Chang'd.\n".write(to: guarded, atomically: true, encoding: .utf8)
+
+        var refused = false
+        do {
+            try Comments.replace(lines: 0..<1, with: "Ours.", in: guarded, expecting: stamp)
+        } catch { refused = true }
+        check("a file that changed on disk is not written over", refused)
+        check("and what the other writer put there is still there",
+              read(guarded)[0] == "Chang'd.", read(guarded)[0])
+
+        let short = fixture("One line.\n")
+        var complained = false
+        do {
+            try Comments.replace(lines: 5..<9, with: "Nope.", in: short, expecting: nil)
+        } catch { complained = true }
+        check("a range past the end of the file is refused", complained)
+        check("and the file is untouched", read(short)[0] == "One line.")
     }
 
     // MARK: - The acceptance criterion from the plan

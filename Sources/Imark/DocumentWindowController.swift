@@ -35,6 +35,11 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
     /// cheapest way to put a real change on the undo stack from a test.
     var composingFileNote = false
     private(set) var reviewingComments = false
+    /// Whether what the page is showing came out of the file whole. False while
+    /// a document is unreadable, gone, or too big to show all of — the three
+    /// times the page holds something Imark wrote, which must never be written
+    /// back over the thing it is standing in for.
+    private var showingRealDocument = false
 
     private var watcher: FileWatcher?
     private var back: [URL] = []
@@ -191,6 +196,12 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         Review.forget()
         buildToolbar()
 
+        // Until proved otherwise, below. What the next two paths put on screen
+        // is a message Imark wrote rather than the document, and a message that
+        // could be edited back into the file would replace somebody's document
+        // with the words "Can't read this file".
+        showingRealDocument = false
+
         guard var text = try? String(contentsOf: url, encoding: .utf8) else {
             content.renderer.render(
                 markdown: "# Can't read this file\n\n`\(url.path)`\n\nIt exists, but it isn't UTF-8 text.",
@@ -199,16 +210,24 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
             return
         }
 
+        // A prefix with a notice bolted onto the end of it. Every line above the
+        // cut is where it says it is, but the notice has no lines in the file at
+        // all, and a block committed from down there would append it.
         if text.utf8.count > Self.sizeLimit {
             let prefix = String(decoding: Array(text.utf8.prefix(Self.sizeLimit)), as: UTF8.self)
             text = prefix + "\n\n---\n\n> **Truncated.** Above 5 MB Imark shows only the beginning."
+            stamp = Comments.Stamp(of: url)
+            content.renderer.render(markdown: text, path: url.path)
+            return
         }
 
         stamp = Comments.Stamp(of: url)
+        showingRealDocument = true
         content.renderer.render(markdown: text, path: url.path)
     }
 
     private func showVanished() {
+        showingRealDocument = false
         content.renderer.render(
             markdown: "# This file no longer exists\n\n`\(url.path)`",
             path: url.path
@@ -293,6 +312,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         case .noteCommand(let command):
             perform(command)
 
+        case .editSource(let edit):
+            commitSource(edit)
+
         case .comments(let found, let reviewing):
             notes = found
             noteCount = found.count
@@ -366,6 +388,35 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
             selectionPopover.reportCommentFailure(
                 (error as? LocalizedError)?.errorDescription ?? "Couldn't save the comment"
             )
+        }
+    }
+
+    /// Writes a block back after it was edited as markdown.
+    ///
+    /// The renderer has already spliced this into its own copy and refused it if
+    /// any note in the document broke; it owns the parser, so it is the only
+    /// side that can tell. What is left to do here is what this side owns: put
+    /// the whole document on the undo stack, and refuse to write at all if the
+    /// file moved underneath us since it was read.
+    ///
+    /// This is the second thing Imark does that changes a document and the first
+    /// that changes something other than a note, so it goes through exactly the
+    /// same door — `Comments.replace` is `Comments.insert`'s guarantees with a
+    /// different range.
+    private func commitSource(_ edit: SourceEdit) {
+        // A message Imark wrote is on screen instead of the document. There is
+        // nothing here that belongs in the file.
+        guard showingRealDocument else { return NSSound.beep() }
+
+        do {
+            snapshot("Edit")
+            try Comments.replace(
+                lines: edit.lines, with: edit.text, in: url, expecting: stamp
+            )
+            finishWrite()
+        } catch {
+            undoStack.discardLast()
+            report(error, doing: "save that edit")
         }
     }
 
