@@ -2,15 +2,24 @@
 //
 // The point of the feature is that fixing a typo costs a keystroke instead of
 // opening the whole file in an editor and losing your place. Everything here
-// follows from that: the control is small, it is attached to the block it acts
-// on, and closing it is one key.
+// follows from that: the control is small, it sits beside the block it acts on,
+// and closing it is one key.
 //
-// Two rules are worth stating because breaking either is easy and quiet.
+// Three rules are worth stating because breaking any of them is easy and quiet.
 //
 // The control is a button of its own, sitting beside the block — never the
 // block itself, and never a gesture on it. Selection is the whole product in
 // this app: it is how a comment finds the words it is about, and anything that
 // captures a drag over prose takes that away. Nothing here is draggable.
+//
+// The button does not live inside the block it acts on. It floats in the
+// margin, positioned from the block's rectangle, exactly the way the `+` does —
+// and for two reasons that only showed up in a browser. A button parented to
+// the block is positioned from *that* element's left edge, so it sat 24px
+// further right on a list item than on a paragraph and the margin looked
+// ragged. And a `position: absolute` child of a `<table>` is folded into the
+// anonymous table box and never painted at all: correct rectangle, opacity 1,
+// nothing on screen and nothing to click. Tables had no way in whatsoever.
 //
 // A block is hidden with `display: none`, not the `hidden` attribute. `hidden`
 // is the lowest-specificity rule there is and loses to any author rule that
@@ -18,12 +27,12 @@
 // document. It fails by leaving the element visible, or worse, invisible and
 // still taking clicks.
 
-const ICON_SOURCE
+export const ICON_SOURCE
   = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" '
   + 'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" '
   + 'd="M6 4 2.5 8 6 12M10 4l3.5 4-3.5 4"/></svg>'
 
-const ICON_RENDERED
+export const ICON_RENDERED
   = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" '
   + 'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" '
   + 'd="M1.5 8S3.9 3.5 8 3.5 14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8Z"/>'
@@ -44,7 +53,7 @@ const range = (el) => {
 /// the piece before the note is a couple of `<li>`s rather than anything with a
 /// tag of its own. Taking the outermost elements that fit inside the piece
 /// gives the right answer for both without a special case for either.
-function elementsFor(root, segment) {
+export function elementsFor(root, segment) {
   const inside = []
   const walk = (parent) => {
     for (const child of parent.children) {
@@ -60,6 +69,35 @@ function elementsFor(root, segment) {
   return inside
 }
 
+/// The elements to hide, plus any container they leave standing empty.
+///
+/// A list item whose note sits inside it spans the note's lines too, so the
+/// piece being edited matches the paragraph inside the `<li>` and not the `<li>`
+/// itself. Hiding just the paragraph takes the words away and leaves the bullet
+/// behind: an empty marker floating between the editor and the next item, which
+/// reads as a rendering fault. Anything left with no visible content of its own
+/// goes with it, up to but never past the block.
+export function withEmptyAncestors(elements, boundary) {
+  const all = new Set(elements)
+
+  const blank = (element) => {
+    for (const child of element.childNodes) {
+      if (child.nodeType === Node.TEXT_NODE && child.textContent.trim()) return false
+      if (child.nodeType === Node.ELEMENT_NODE && !all.has(child)) return false
+    }
+    return true
+  }
+
+  for (const element of elements) {
+    let parent = element.parentElement
+    while (parent && parent !== boundary && boundary.contains(parent) && blank(parent)) {
+      all.add(parent)
+      parent = parent.parentElement
+    }
+  }
+  return [...all]
+}
+
 /// Opens one piece of the file as text, and puts it away again.
 ///
 /// Shared by the two ways in, because they differ only in what gets hidden and
@@ -73,7 +111,7 @@ function elementsFor(root, segment) {
 /// only copy of it, and closing the box would throw it away to make room for a
 /// message about why it could not be saved.
 export function openSourceEditor({
-  segment, hide, place, label, sourceOf, commit, onClosed,
+  segment, hide, place, label, sourceOf, commit, onClosed, showBack = false,
 }) {
   const box = document.createElement('div')
   box.className = 'source-box'
@@ -109,6 +147,25 @@ export function openSourceEditor({
   message.setAttribute('role', 'alert')
 
   box.append(area, message)
+
+  // The way back out, for the ways in that do not keep one of their own.
+  //
+  // The margin control cannot be it: it follows the block under the pointer,
+  // and the block it belongs to is the one thing on screen that is no longer
+  // there. So it hides while an editor is open, and without this the only way
+  // back would be a key nobody was told about. A note's card keeps its own lit
+  // control and passes showBack: false.
+  let back = null
+  if (showBack) {
+    back = document.createElement('button')
+    back.type = 'button'
+    back.className = 'source-back'
+    back.innerHTML = `${ICON_RENDERED}<span>Done</span>`
+    back.title = 'Back to the rendered block'
+    back.setAttribute('aria-label', 'Back to the rendered block')
+    box.appendChild(back)
+  }
+
   place(box)
   for (const element of hide) element.classList.add('is-source-hidden')
   // After it is in the document and after the block it replaces is out of the
@@ -125,20 +182,33 @@ export function openSourceEditor({
     onClosed?.()
   }
 
+  /// True if the edit was accepted. Callers need the answer: a refusal has to
+  /// leave the editor open, because what was typed is the only copy of it.
   const save = () => {
-    if (closing) return
+    if (closing) return true
     const verdict = commit(segment, area.value)
     if (verdict.ok) {
       // A change re-renders the whole document from the file a moment later,
       // which takes this editor with it. An unchanged piece never went to disk,
       // so it has to put itself away.
       if (verdict.unchanged) close()
-      return
+      return true
     }
     message.textContent = verdict.reason
     message.hidden = false
     area.focus()
+    return false
   }
+
+  // Saves on the way out, the same as clicking anywhere else away from the box.
+  // A button that discarded what you had typed while every other way of leaving
+  // kept it would be the one that lost somebody's work.
+  back?.addEventListener('click', () => {
+    // Only if it was accepted. Closing over a refusal would throw away what
+    // somebody typed and leave the message about why on screen for a moment,
+    // attached to nothing.
+    if (save()) close()
+  })
 
   area.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
@@ -162,67 +232,3 @@ export function openSourceEditor({
   return close
 }
 
-/// Attaches a way into the source of every block of the document.
-export function installSourceEditors(root, { segments, sourceOf, commit }) {
-  for (const segment of segments) {
-    if (segment.kind !== 'content') continue
-
-    const elements = elementsFor(root, segment)
-    if (!elements.length) continue
-
-    const anchor = elements[0]
-    anchor.classList.add('has-source-toggle')
-
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = 'source-toggle'
-    button.innerHTML = ICON_SOURCE
-    // Both of these say which way it goes. "Source" on its own names where you
-    // would end up and not whether you are going there or coming back, which is
-    // the one thing somebody looking at a lit-up button needs to know.
-    button.title = 'Edit this block as markdown'
-    button.setAttribute('aria-label', 'Edit this block as markdown')
-    anchor.appendChild(button)
-
-    // One handler that knows which way it is going. Two — an opener bound once
-    // and a closer assigned later — both fire on the same press, so the block
-    // opened and shut again in a single click and looked like a dead button.
-    const state = { close: null }
-    button.addEventListener('click', () => {
-      if (state.close) state.close()
-      else state.close = open(segment, elements, anchor, button, state)
-    })
-  }
-
-  function open(segment, elements, anchor, button, state) {
-    button.classList.add('is-on')
-    button.innerHTML = ICON_RENDERED
-    button.title = 'Back to the rendered block'
-    button.setAttribute('aria-label', 'Back to the rendered block')
-
-    const close = openSourceEditor({
-      segment,
-      hide: elements,
-      label: 'Markdown source for this block',
-      place: (element) => {
-        anchor.parentElement.insertBefore(element, anchor)
-        // Moved onto the editor so the way back is still there, and still says
-        // which way it goes, while the block it belongs to is out of sight.
-        element.appendChild(button)
-      },
-      sourceOf,
-      commit,
-      onClosed: () => {
-        state.close = null
-        anchor.appendChild(button)
-        button.classList.remove('is-on')
-        button.innerHTML = ICON_SOURCE
-        button.title = 'Edit this block as markdown'
-        button.setAttribute('aria-label', 'Edit this block as markdown')
-        button.focus()
-      },
-    })
-
-    return close
-  }
-}

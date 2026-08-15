@@ -11,7 +11,7 @@ import renderMathInElement from 'katex/contrib/auto-render'
 import mermaid from 'mermaid'
 
 import wikilink from './wikilink.js'
-import { installSourceEditors, openSourceEditor } from './editor.js'
+import { ICON_SOURCE, elementsFor, openSourceEditor, withEmptyAncestors } from './editor.js'
 import { segmentsOf, spliceSegment, textOf } from './source.js'
 import { validateCommit } from './validate.js'
 import {
@@ -812,12 +812,9 @@ async function render({ markdown, path, theme, preview, rail }) {
   addCopyButtons(root)
   // After the notes are attached, never before: a commented block is wrapped in
   // a holder, so the elements a piece of the file stands for are not the ones
-  // that were there a moment ago.
-  installSourceEditors(root, {
-    segments: editableSegments(),
-    sourceOf: (piece) => textOf(lastSource, piece),
-    commit: commitSource,
-  })
+  // that were there a moment ago. Held rather than derived on demand because
+  // the margin control looks this up on every mousemove.
+  lastSegments = editableSegments()
   renderMath(root)
   activeHeadings = buildToc(root)
   buildRail(root)
@@ -914,6 +911,34 @@ function blockRanges() {
 /// Every piece of the document that can be opened as markdown.
 export function editableSegments() {
   return segmentsOf(lastSource, blockRanges(), lastComments)
+}
+
+/// The pieces of the document as it currently stands, recomputed on each render
+/// and read by the margin control.
+let lastSegments = []
+
+/// The piece a point on screen belongs to.
+///
+/// A block is usually one piece, and then this is the piece the `+` is standing
+/// beside. A list with a note written into the middle of it is two, inside one
+/// `<ul>`, and which one you meant is decided by where the pointer is — the
+/// only thing that can tell them apart, since they share a block.
+function segmentAt(block, clientY) {
+  const root = content()
+  const within = lastSegments.filter(
+    (piece) => piece.kind === 'content' && elementsFor(root, piece).some((el) => block.contains(el))
+  )
+  if (within.length < 2) return within[0] ?? null
+  const under = within.find((piece) =>
+    elementsFor(root, piece).some((el) => {
+      const rect = el.getBoundingClientRect()
+      return clientY >= rect.top && clientY <= rect.bottom
+    })
+  )
+  // A pointer in the gap between two pieces of the same block belongs to
+  // neither. The first is the better guess than nothing: it is the one the
+  // control is drawn beside.
+  return under ?? within[0]
 }
 
 /// Opening a note's own markdown, asked for from its card.
@@ -1059,6 +1084,9 @@ let plusTarget = null
 /// pointer crosses the margin, which belongs to no block, and hiding on the
 /// first frame outside meant the button vanished exactly as you reached for it.
 let plusHideTimer = 0
+/// Where the pointer last was, vertically. Read when the margin control is
+/// pressed, to tell two pieces of one block apart.
+let lastPointerY = 0
 
 const cancelHide = () => clearTimeout(plusHideTimer)
 const scheduleHide = () => {
@@ -1107,10 +1135,33 @@ const topLevelBlock = (node) => {
     : null
 }
 
+/// The second button in the margin: the way into the block's markdown.
+///
+/// It travels with the `+` rather than living inside the block, and the two are
+/// positioned from the same rectangle in the same call, which is the only way
+/// they stay level. Parented to the block instead, it was measured from that
+/// element's own left edge — 24px further right on a list item than on a
+/// paragraph — and inside a `<table>` it was never painted at all, because an
+/// absolutely positioned non-table child is folded into the anonymous table box
+/// and dropped. Nothing about a table is special here now; it is just another
+/// rectangle to sit beside.
+let sourceButton = null
+/// While an editor is open the margin stops offering another one. Two open at
+/// once is two unsaved edits to the same file, and the second to be committed
+/// would be spliced against lines the first had already moved.
+let openEditor = null
+
+/// Where the two margin buttons sit, as offsets from the block's left edge. The
+/// `+` keeps the 34 it has always had; source sits outside it. Both are clamped
+/// so a narrow window pushes them into the gutter rather than off the page.
+const PLUS_OFFSET = 34
+const SOURCE_OFFSET = 62
+
 function hidePlus() {
   plusTarget?.classList.remove('block-target', 'block-armed')
   plusTarget = null
   if (plusButton) plusButton.style.display = 'none'
+  if (sourceButton) sourceButton.style.display = 'none'
 }
 
 function showPlus(block) {
@@ -1125,7 +1176,19 @@ function showPlus(block) {
   const rect = block.getBoundingClientRect()
   plusButton.style.display = 'flex'
   plusButton.style.top = `${rect.top + 1}px`
-  plusButton.style.left = `${Math.max(4, rect.left - 34)}px`
+  plusButton.style.left = `${Math.max(4, rect.left - PLUS_OFFSET)}px`
+
+  if (!sourceButton) return
+  // Only where there is something to open. A block with no piece of its own —
+  // the front matter card, which is drawn from the header and has no lines of
+  // the document behind it — gets the `+` and not this.
+  const piece = lastSegments.some(
+    (segment) => segment.kind === 'content'
+      && elementsFor(content(), segment).some((el) => block.contains(el))
+  )
+  sourceButton.style.display = piece && !openEditor ? 'flex' : 'none'
+  sourceButton.style.top = `${rect.top + 1}px`
+  sourceButton.style.left = `${Math.max(4, rect.left - SOURCE_OFFSET)}px`
 }
 
 function setUpBlockPlus() {
@@ -1137,13 +1200,50 @@ function setUpBlockPlus() {
   plusButton.style.display = 'none'
   document.body.appendChild(plusButton)
 
-  plusButton.addEventListener('mouseenter', () => {
-    cancelHide()
-    plusTarget?.classList.add('block-armed')
-  })
-  plusButton.addEventListener('mouseleave', () => {
-    plusTarget?.classList.remove('block-armed')
-    scheduleHide()
+  sourceButton = document.createElement('button')
+  sourceButton.type = 'button'
+  sourceButton.className = 'source-toggle'
+  sourceButton.innerHTML = ICON_SOURCE
+  sourceButton.title = 'Edit this block as markdown'
+  sourceButton.setAttribute('aria-label', 'Edit this block as markdown')
+  sourceButton.style.display = 'none'
+  document.body.appendChild(sourceButton)
+
+  for (const button of [plusButton, sourceButton]) {
+    button.addEventListener('mouseenter', () => {
+      cancelHide()
+      plusTarget?.classList.add('block-armed')
+    })
+    button.addEventListener('mouseleave', () => {
+      plusTarget?.classList.remove('block-armed')
+      scheduleHide()
+    })
+  }
+
+  sourceButton.addEventListener('click', () => {
+    const block = plusTarget
+    if (!block || openEditor) return
+    const piece = segmentAt(block, lastPointerY)
+    if (!piece) return
+
+    const found = elementsFor(content(), piece)
+    if (!found.length) return
+    const anchor = found[0]
+    const elements = withEmptyAncestors(found, block)
+
+    hidePlus()
+    openEditor = openSourceEditor({
+      segment: piece,
+      hide: elements,
+      label: 'Markdown source for this block',
+      place: (box) => anchor.parentElement.insertBefore(box, anchor),
+      sourceOf: (target) => textOf(lastSource, target),
+      commit: commitSource,
+      // The margin control follows the pointer and hides while this is open, so
+      // the editor has to carry its own way back.
+      showBack: true,
+      onClosed: () => { openEditor = null },
+    })
   })
 
   plusButton.addEventListener('click', () => {
@@ -1169,7 +1269,10 @@ function setUpBlockPlus() {
     // anything. Existing notes still show — that is reading — but offering a
     // way to add one there is offering something that cannot happen.
     if (document.documentElement.dataset.preview === 'true') return hidePlus()
-    if (event.target === plusButton) return cancelHide()
+    if (event.target === plusButton || sourceButton?.contains(event.target)) return cancelHide()
+    // Kept because the block under the pointer is not always one piece: a list
+    // with a note written into it is two, and only the pointer can say which.
+    lastPointerY = event.clientY
     // Not while a selection is live: the popover is already open on words the
     // reader chose, and a second way in would fight it.
     if (hadSelection) return hidePlus()

@@ -1264,17 +1264,17 @@ img[data-blocked] {
 /* The way into a block's markdown. Beside the block, never on it: a control
    that covered the text would take the drag that starts a selection, and
    selecting is how a comment finds the words it is about. */
-.has-source-toggle { position: relative; }
 
-/* Outside the `+`, not on top of it. The comment button is fixed to the
-   viewport at the hovered block's left edge minus 34px, so anything nearer than
-   that lands underneath it — which is how this first went in, and the margin
-   then had two controls stacked in one place with only the top one reachable.
-   The margin reads left to right: source, comment, text. */
+/* One button that follows the block under the pointer, exactly as the `+` does,
+   and positioned beside it from the same rectangle in the same call. Fixed to
+   the viewport rather than parented to the block, for two reasons found only by
+   looking at it: inside the block it was measured from that element's own left
+   edge, so it sat 24px further right on a list item than on a paragraph; and
+   inside a <table> an absolutely positioned non-table child is folded into the
+   anonymous table box and never painted, which left tables with no way in. */
 .source-toggle {
-  position: absolute;
-  top: 0;
-  left: calc(var(--step) * -16);
+  position: fixed;
+  z-index: 8;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1285,31 +1285,24 @@ img[data-blocked] {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
-  opacity: 0;
-  transition: opacity 120ms ease;
+  opacity: 0.5;
+  transition: opacity 100ms ease;
   cursor: pointer;
 }
 
-.source-toggle svg { width: 13px; height: 13px; display: block; }
+.source-toggle svg { width: 13px; height: 13px; display: block; pointer-events: none; }
 
-/* Shown on hover, and on focus so it can be reached without a pointer. Without
-   a focus rule the control exists for the keyboard but never appears, which is
-   the same as not existing.
-   Both :focus and :focus-visible, deliberately. :focus-visible alone is the
-   tidier rule — it is what stops a mouse click leaving a ring behind — but it
-   is also a judgement the engine makes about how the element was focused, and
-   the whole control disappearing is too much to hang on it. :focus costs
-   nothing here: the only ways to focus this button are the keyboard, and a
-   click, and after a click it is already showing. */
-.has-source-toggle:hover > .source-toggle,
+/* Full strength under the pointer and when tabbed to. Both :focus and
+   :focus-visible, deliberately: :focus-visible alone is the tidier rule, but it
+   is a judgement the engine makes about how the element was focused, and a
+   control that vanishes entirely is too much to hang on it. */
+.source-toggle:hover,
 .source-toggle:focus,
-.source-toggle:focus-visible,
-.source-toggle.is-on {
+.source-toggle:focus-visible {
   opacity: 1;
+  color: var(--text);
 }
 
-.source-toggle:hover { color: var(--text); }
-.source-toggle.is-on { color: var(--accent); border-color: var(--accent); }
 
 /* Hidden with display, not the `hidden` attribute. `hidden` is the lowest
    specificity rule in the language and loses to any author rule that sets
@@ -1379,3 +1372,24 @@ img[data-blocked] {
 /* The way back out. It is the only control on the card that stays lit, because
    it is the only one that is currently doing something. */
 .note-action.is-on { color: var(--note); opacity: 1; }
+
+/* The way back out of a block's editor. In the box because the control that
+   opened it lives in the margin and follows the pointer: it cannot stay put
+   beside a block that is no longer on screen. */
+.source-back {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--step) * 1.5);
+  margin-top: calc(var(--step) * 2);
+  padding: 3px 10px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.source-back svg { width: 12px; height: 12px; display: block; }
+.source-back:hover { color: var(--text); }
