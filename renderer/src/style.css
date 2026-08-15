@@ -1393,3 +1393,9 @@ img[data-blocked] {
 
 .source-back svg { width: 12px; height: 12px; display: block; }
 .source-back:hover { color: var(--text); }
+
+/* Editing turned off in Settings. The controls go rather than grey out: a
+   disabled button in the margin would be a permanent reminder of a decision
+   already made, on every block, for as long as the setting is off. */
+:root[data-editing='false'] .source-toggle,
+:root[data-editing='false'] .note-source { display: none; }

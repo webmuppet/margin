@@ -917,6 +917,17 @@ export function editableSegments() {
 /// and read by the margin control.
 let lastSegments = []
 
+/// Whether this document may be changed in place at all.
+///
+/// Kept on the root element rather than in a variable, so the stylesheet can
+/// answer most of the question on its own — a control that is never drawn needs
+/// no code to explain why. The paths that write still check it themselves,
+/// because a hidden button is a thing you cannot press and not a thing that
+/// cannot happen: the delete key never had a button in the first place.
+const editingAllowed = () =>
+  document.documentElement.dataset.editing !== 'false'
+  && document.documentElement.dataset.preview !== 'true'
+
 /// The piece a point on screen belongs to.
 ///
 /// A block is usually one piece, and then this is the piece the `+` is standing
@@ -954,7 +965,7 @@ document.addEventListener('imark:editMarker', (event) => {
   )
   const card = button.closest('.note-card')
   // One editor at a time anywhere in the document, not just on this card.
-  if (!piece || !card || editorIsOpen()) return
+  if (!piece || !card || !editingAllowed() || editorIsOpen()) return
 
   // The card's own rendering of the note goes; its controls stay. A way in that
   // disappears once you are through it leaves no way back out.
@@ -973,6 +984,41 @@ document.addEventListener('imark:editMarker', (event) => {
       button.focus()
     },
   })
+})
+
+/// Deletes the block the margin controls are standing beside.
+///
+/// The block, not a selection: what the key acts on is the thing lit up on
+/// screen, so there is never a question of what is about to go. If the pointer
+/// is not beside anything, the key does what it has always done — nothing.
+///
+/// Guarded on where the keystroke came from, not on what it was. Delete inside
+/// the source editor is deleting a character, delete inside the composer is
+/// deleting a character, and a document-wide handler that did not check would
+/// eat a paragraph while somebody was typing a note about it.
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Backspace' && event.key !== 'Delete') return
+  if (event.metaKey || event.ctrlKey || event.altKey) return
+  if (!editingAllowed() || editorIsOpen()) return
+
+  const target = event.target
+  if (target instanceof HTMLElement
+      && (target.isContentEditable || target.closest('input, textarea'))) return
+
+  // A selection means the reader has words in mind, and the popover over them
+  // is offering to comment on exactly those. Deleting the block under all that
+  // would answer a question nobody asked.
+  const selection = window.getSelection()
+  if (selection && !selection.isCollapsed && selection.toString().trim()) return
+
+  const block = document.querySelector('.block-target')
+  if (!block) return
+
+  const piece = segmentAt(block, lastPointerY)
+  if (!piece) return
+
+  event.preventDefault()
+  bridge({ type: 'deleteBlock', from: piece.from, to: piece.to })
 })
 
 /// Checks an edit and, if it is safe, hands it to Swift to write.
@@ -1195,7 +1241,7 @@ function showPlus(block) {
     (segment) => segment.kind === 'content'
       && elementsFor(content(), segment).some((el) => block.contains(el))
   )
-  sourceButton.style.display = piece && !editorIsOpen() ? 'flex' : 'none'
+  sourceButton.style.display = piece && editingAllowed() && !editorIsOpen() ? 'flex' : 'none'
   sourceButton.style.top = `${rect.top + 1}px`
   sourceButton.style.left = `${Math.max(4, rect.left - SOURCE_OFFSET)}px`
 }
@@ -1231,7 +1277,7 @@ function setUpBlockPlus() {
 
   sourceButton.addEventListener('click', () => {
     const block = plusTarget
-    if (!block || editorIsOpen()) return
+    if (!block || !editingAllowed() || editorIsOpen()) return
     const piece = segmentAt(block, lastPointerY)
     if (!piece) return
 
@@ -1450,6 +1496,22 @@ window.imark = {
   },
   setPreview(on) {
     document.documentElement.dataset.preview = on ? 'true' : 'false'
+  },
+  /// Whether the document may be changed in place. Turning it off closes
+  /// anything already open: leaving an editor on screen that can no longer
+  /// write would be a box that swallows what you type.
+  setEditing(on) {
+    document.documentElement.dataset.editing = on ? 'true' : 'false'
+    if (!on) {
+      for (const box of document.querySelectorAll('.source-box')) box.remove()
+      for (const hidden of document.querySelectorAll('.is-source-hidden')) {
+        hidden.classList.remove('is-source-hidden')
+      }
+      for (const lit of document.querySelectorAll('.note-action.is-on')) {
+        lit.classList.remove('is-on')
+      }
+      hidePlus()
+    }
   },
   setRail(side) {
     if (side) document.documentElement.dataset.rail = side

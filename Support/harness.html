@@ -81,6 +81,14 @@
         <li>Reach the control with <kbd>Tab</kbd> alone and open it with <kbd>Enter</kbd>.
             This is the one no automation reaches: a driven browser never has system
             focus, so <code>:focus</code> cannot match and Tab never arrives.</li>
+        <li>Hover a block and press <kbd>⌫</kbd>. The block goes, and no gap is left
+            where it was. Then check the key does <em>nothing</em> while you are typing
+            in an open editor, and nothing while text is selected — a selection means
+            the popover is offering to comment on those words.</li>
+        <li>Turn editing off (<code>window.imark.setEditing(false)</code> here, the
+            Settings switch in the app). Both <code>&lt;/&gt;</code> controls go, any
+            open editor closes, and <kbd>⌫</kbd> stops deleting. Turn it back on and
+            all three return.</li>
       </ol>
       <p>
         <button type="button" id="reset">Start again</button>
@@ -149,9 +157,21 @@
             postMessage(message) {
               sent.push(message)
               show()
-              if (message.type !== 'editSource') return
               const lines = doc.split('\n')
-              lines.splice(message.from, message.to - message.from, ...message.text.split('\n'))
+
+              if (message.type === 'editSource') {
+                lines.splice(message.from, message.to - message.from, ...message.text.split('\n'))
+              } else if (message.type === 'deleteBlock') {
+                // Mirrors Comments.cut: the block, and the blank line it would
+                // otherwise leave behind.
+                let { from, to } = message
+                if (to < lines.length && !lines[to].trim()) to += 1
+                else if (from > 0 && !lines[from - 1].trim()) from -= 1
+                lines.splice(from, to - from)
+              } else {
+                return
+              }
+
               doc = lines.join('\n')
               setTimeout(() => render(), 10)
             },

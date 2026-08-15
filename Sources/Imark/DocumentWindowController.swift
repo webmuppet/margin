@@ -315,6 +315,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         case .editSource(let edit):
             commitSource(edit)
 
+        case .deleteBlock(let lines):
+            deleteBlock(lines)
+
         case .comments(let found, let reviewing):
             notes = found
             noteCount = found.count
@@ -422,6 +425,28 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         } catch {
             undoStack.discardLast()
             report(error, doing: "save that edit")
+        }
+    }
+
+    /// Removes the block under the pointer, asked for with the delete key.
+    ///
+    /// The same door again, and the same undo: a snapshot of the whole document
+    /// first, so ⌘Z puts a deleted paragraph back exactly as it puts a note
+    /// back. Named for what it will undo, because the menu says so.
+    ///
+    /// Nothing asks first. A key that deletes a paragraph and then argues about
+    /// it is a key nobody presses twice, and the answer to a wrong one is the
+    /// same as it is everywhere else in this app: ⌘Z, ten deep.
+    private func deleteBlock(_ lines: Range<Int>) {
+        guard showingRealDocument else { return NSSound.beep() }
+
+        do {
+            snapshot("Delete Block")
+            try Comments.cut(lines: lines, from: url, expecting: stamp)
+            finishWrite()
+        } catch {
+            undoStack.discardLast()
+            report(error, doing: "delete that block")
         }
     }
 
@@ -677,6 +702,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         content.renderer.applyTheme()
         content.renderer.setTextScale(Settings.textScale)
         content.renderer.setWidth(Settings.width.rawValue)
+        content.renderer.setEditing(Settings.editsInPlace)
         refreshThemeButton()
     }
 

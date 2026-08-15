@@ -18,6 +18,7 @@ public enum RendererMessage {
     case comments(notes: [NoteSummary], reviewing: Bool)
     case noteCommand(NoteCommand)
     case editSource(SourceEdit)
+    case deleteBlock(lines: Range<Int>)
 }
 
 /// A block edited as markdown, on its way back to the file.
@@ -199,6 +200,13 @@ public final class RendererView: NSView {
     public func setRail(_ side: String?) {
         railSide = side
         call("window.imark.setRail", side ?? "")
+    }
+
+    /// Whether the page offers any way to change the document. Off takes the
+    /// margin control away, takes the way into a note's markdown away, closes
+    /// anything already open, and stops the delete key doing anything.
+    public func setEditing(_ on: Bool) {
+        call("window.imark.setEditing", on)
     }
 
     public func find(_ query: String) {
@@ -417,6 +425,12 @@ public final class RendererView: NSView {
                       let text = body["text"] as? String
                 else { break }
                 owner.onMessage?(.editSource(SourceEdit(lines: from..<to, text: text)))
+
+            case "deleteBlock":
+                guard let from = body["from"] as? Int,
+                      let to = body["to"] as? Int, from < to
+                else { break }
+                owner.onMessage?(.deleteBlock(lines: from..<to))
 
             case "wikilinks":
                 owner.onMessage?(.wikilinks(body["targets"] as? [String] ?? []))

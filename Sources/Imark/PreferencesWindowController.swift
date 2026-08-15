@@ -25,6 +25,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
     /// done.
     private let isDefault = NSStackView()
     private let menuBar = NSButton()
+    private let editing = NSButton()
     private let updates = NSButton()
     private let shortcuts = NSButton()
 
@@ -192,6 +193,17 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         menuBar.target = self
         menuBar.action = #selector(menuBarChanged)
 
+        editing.title = "Edit and delete blocks in place"
+        editing.setButtonType(.switch)
+        editing.target = self
+        editing.action = #selector(editingChanged)
+        // What it covers, in the order somebody meets them: the control in the
+        // margin, and the key. Comments are named too, because "editing" off
+        // and the speech bubble still there would otherwise read as a bug.
+        editing.toolTip = "The margin offers a way into a block's markdown, and "
+            + "delete removes the block under the pointer. Off leaves Imark "
+            + "reading only — comments still write, as they always have."
+
         updates.title = "Check for new versions once a day"
         updates.setButtonType(.switch)
         updates.target = self
@@ -211,6 +223,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
             ("Open in", editor),
             ("Markdown files", markdown),
             ("Menu bar", menuBar),
+            ("Editing", editing),
             ("Updates", updates),
             ("Reference", shortcuts),
         ]
@@ -277,6 +290,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
             editor.selectItem(at: index)
         }
         menuBar.state = Settings.showInMenuBar ? .on : .off
+        editing.state = Settings.editsInPlace ? .on : .off
         updates.state = Settings.checksForUpdates ? .on : .off
         // One or the other, never a dead button: there is either something to
         // press or a fact to state.
@@ -333,6 +347,10 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
     @objc private func menuBarChanged() {
         Settings.showInMenuBar = menuBar.state == .on
         MenuBarItem.shared.sync()
+    }
+
+    @objc private func editingChanged() {
+        Settings.editsInPlace = editing.state == .on
     }
 
     @objc private func updatesChanged() {

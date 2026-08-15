@@ -194,6 +194,21 @@ enum Settings {
         set { store.set(newValue, forKey: "sidebarCollapsed") }
     }
 
+    /// Whether a document can be changed in place: the way into a block's
+    /// markdown, and the key that deletes one.
+    ///
+    /// One switch for both, because they are one decision. A preference that
+    /// turned the editor off and left a keystroke that removes a paragraph
+    /// would be worse than no preference at all — somebody who turns this off
+    /// is asking for the document to be safe, not for a shorter list of ways
+    /// to change it. Comments are not covered and are not meant to be: they
+    /// are what the app is for, they go through their own composer, and they
+    /// have always been the one thing it writes.
+    static var editsInPlace: Bool {
+        get { store.object(forKey: "editsInPlace") as? Bool ?? true }
+        set { store.set(newValue, forKey: "editsInPlace"); announce() }
+    }
+
     /// On by default, and honoured *before* any request is built — turning it
     /// off means the app touches the network zero times. See Updates.swift for
     /// what the one request is.

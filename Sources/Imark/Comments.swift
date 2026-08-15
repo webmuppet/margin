@@ -88,6 +88,33 @@ enum Comments {
         }
     }
 
+    /// Takes a block of the document out, and the blank line it leaves behind.
+    ///
+    /// The same tidying `remove` does for a note, and for the same reason: a
+    /// document that collects an empty line every time something is deleted
+    /// ends up spaced by how often it has been edited rather than by how it
+    /// reads. Splicing an empty string over the range would leave exactly that.
+    ///
+    /// Whether the range is one somebody meant to delete is the renderer's
+    /// question, and it has answered it — this is the range of a block it drew.
+    /// What is checked here is what this side owns: that the lines are still
+    /// there, and that the file has not moved underneath us.
+    static func cut(lines range: Range<Int>, from url: URL, expecting stamp: Stamp?) throws {
+        try edit(url, expecting: stamp) { lines in
+            guard range.lowerBound >= 0, range.upperBound <= lines.count,
+                  range.lowerBound < range.upperBound
+            else { throw Failure.outOfRange }
+
+            var cut = range
+            if cut.upperBound < lines.count, lines[cut.upperBound].isBlank {
+                cut = cut.lowerBound..<(cut.upperBound + 1)
+            } else if cut.lowerBound > 0, lines[cut.lowerBound - 1].isBlank {
+                cut = (cut.lowerBound - 1)..<cut.upperBound
+            }
+            lines.removeSubrange(cut)
+        }
+    }
+
     /// Takes a note out, along with one blank line it left behind — otherwise
     /// deleting notes slowly fills a document with gaps.
     static func remove(lines range: ClosedRange<Int>, from url: URL, expecting stamp: Stamp?) throws {

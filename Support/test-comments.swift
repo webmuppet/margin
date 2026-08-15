@@ -52,6 +52,7 @@ enum CommentsTest {
         try staleRanges()
         try colours()
         try replacing()
+        try cutting()
 
         try? FileManager.default.removeItem(at: folder)
         print(failures == 0 ? "\nall good" : "\n\(failures) failing")
@@ -347,6 +348,49 @@ enum CommentsTest {
         } catch { complained = true }
         check("a range past the end of the file is refused", complained)
         check("and the file is untouched", read(short)[0] == "One line.")
+    }
+
+    // MARK: - Taking a block out
+
+    /// The blank line is the whole point. Splicing an empty string over a block
+    /// would leave the gap behind, and a document deleted from a few times ends
+    /// up spaced by its edit history rather than by how it reads.
+    static func cutting() throws {
+        print("\n▸ deleting a block takes its blank line with it")
+
+        let url = fixture("First.\n\nSecond.\n\nThird.\n")
+        try Comments.cut(lines: 2..<3, from: url, expecting: nil)
+        check("the block is gone", !read(url).contains("Second."), read(url).joined(separator: "|"))
+        check("and no gap is left where it was",
+              read(url) == ["First.", "", "Third.", ""], read(url).joined(separator: "|"))
+
+        let last = fixture("Only.\n\nLast.\n")
+        try Comments.cut(lines: 2..<3, from: last, expecting: nil)
+        check("the last block takes the blank above it instead",
+              read(last) == ["Only.", ""], read(last).joined(separator: "|"))
+
+        print("\n▸ and it refuses what every other write refuses")
+
+        let guarded = fixture("Before.\n")
+        let stamp = Comments.Stamp(of: guarded)
+        Thread.sleep(forTimeInterval: 0.01)
+        try "Chang'd.\n".write(to: guarded, atomically: true, encoding: .utf8)
+
+        var refused = false
+        do { try Comments.cut(lines: 0..<1, from: guarded, expecting: stamp) } catch { refused = true }
+        check("a file that changed on disk keeps its lines", refused)
+        check("and what the other writer put there is still there",
+              read(guarded)[0] == "Chang'd.", read(guarded)[0])
+
+        let short = fixture("One line.\n")
+        var complained = false
+        do { try Comments.cut(lines: 5..<9, from: short, expecting: nil) } catch { complained = true }
+        check("a range past the end is refused", complained)
+        check("and the file is untouched", read(short)[0] == "One line.")
+
+        var empty = false
+        do { try Comments.cut(lines: 1..<1, from: short, expecting: nil) } catch { empty = true }
+        check("an empty range is refused rather than quietly doing nothing", empty)
     }
 
     // MARK: - The acceptance criterion from the plan
