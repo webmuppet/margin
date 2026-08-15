@@ -76,11 +76,75 @@ final class SelectionPopover {
     func dismiss() {
         if popover.isShown { popover.performClose(nil) }
         isComposing = false
+        stopWatchingForClicksAway()
         popover.behavior = .transient
         show(panel: actionsView)
     }
 
     private var isComposing = false
+
+    /// Whether anything is on screen, and what is in the composer.
+    ///
+    /// Both exist for Support/test-popover.swift, which is the only way this
+    /// particular behaviour can be checked: whether a click outside throws away
+    /// what somebody typed is not a thing to find out by hand twice and then
+    /// hope about. Same reason `composingFileNote` is not private.
+    var isShowing: Bool { popover.isShown }
+    var composedText: String {
+        get { composer.string }
+        set { composer.string = newValue }
+    }
+    /// The popover's own window — what the monitor compares against, so the
+    /// suite can aim a click at the inside as well as the outside.
+    var contentWindowForTesting: NSWindow? { popover.contentViewController?.view.window }
+
+    /// The composer as it opened. A composer nobody has touched is not work in
+    /// progress, and closing it costs nothing.
+    private var original: (body: String, colour: NoteColour) = ("", .standard)
+    private var clickAway: Any?
+
+    /// Whether there is anything here worth protecting.
+    ///
+    /// The colour counts. On a new note it can never matter on its own — an
+    /// empty note will not save whatever colour it is — but on an edit, picking
+    /// a different colour and clicking away is a change somebody made and meant.
+    private var isUntouched: Bool {
+        composer.string.trimmingCharacters(in: .whitespacesAndNewlines) == original.body
+            && picked == original.colour
+    }
+
+    /// Closes the composer when you click outside it, but only while there is
+    /// nothing in it to lose.
+    ///
+    /// The composer holds the popover open on purpose — `applicationDefined` is
+    /// what stops a stray click binning a half-written note. That protection is
+    /// worth having and was worth nothing at all in the common case: open the
+    /// composer, change your mind, and the only way out was finding Cancel. So
+    /// the protection now applies to notes that exist. An empty one goes the way
+    /// every other transient thing on screen goes.
+    ///
+    /// The click is passed on rather than swallowed. Clicking into the document
+    /// to get rid of this is also a click into the document, and having to do it
+    /// twice is the same annoyance one step further along.
+    private func watchForClicksAway() {
+        stopWatchingForClicksAway()
+        clickAway = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) {
+            [weak self] event in
+            guard let self, self.isComposing, self.isUntouched else { return event }
+            // A click inside the popover arrives in the popover's own window,
+            // which is what tells the two apart without hit-testing anything.
+            guard event.window !== self.popover.contentViewController?.view.window else {
+                return event
+            }
+            self.dismiss()
+            return event
+        }
+    }
+
+    private func stopWatchingForClicksAway() {
+        if let clickAway { NSEvent.removeMonitor(clickAway) }
+        clickAway = nil
+    }
 
     private func show(panel: NSView) {
         container.subviews.forEach { $0.removeFromSuperview() }
@@ -266,6 +330,9 @@ final class SelectionPopover {
         if prefill.isEmpty { picked = Settings.noteColour }
         // A click elsewhere must not silently bin what is being typed.
         popover.behavior = .applicationDefined
+        // What "unchanged" means, recorded before anybody can change it.
+        original = (body: prefill.trimmingCharacters(in: .whitespacesAndNewlines), colour: picked)
+        watchForClicksAway()
 
         let subject = prefill.isEmpty ? text : quotedText
         // Nothing was quoted: this came from the `+` in the margin and is about
@@ -358,6 +425,7 @@ final class SelectionPopover {
         let body = composer.string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !body.isEmpty else { return NSSound.beep() }
         isComposing = false
+        stopWatchingForClicksAway()
         popover.behavior = .transient
         onSaveComment?(body, picked)
     }

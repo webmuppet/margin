@@ -30,6 +30,19 @@ swiftc -parse-as-library Sources/Imark/Comments.swift Sources/Imark/NoteColour.s
 Support/test-setup.sh
 ```
 
+The two that need the whole app compiled — `swift build` first, and the `-I` is
+not optional, because `Sources/Imark` imports `ImarkRender` by module:
+
+```bash
+swift build
+for suite in test-undo test-popover; do
+  swiftc -parse-as-library -I .build/debug/Modules \
+    $(find Sources/Imark -name '*.swift' ! -name main.swift) \
+    $(find Sources/ImarkRender -name '*.swift') \
+    "Support/$suite.swift" -o "/tmp/imark-$suite" && "/tmp/imark-$suite"
+done
+```
+
 ## Where things are
 
 ```
