@@ -76,7 +76,11 @@ mkdir -p "$APP/Contents/MacOS" \
          "$APP/Contents/Resources" \
          "$APP/Contents/PlugIns/ImarkQuickLook.appex/Contents/MacOS"
 
-cp "$BIN/Imark" "$APP/Contents/MacOS/Imark"
+# The SwiftPM product is still called Imark; what goes into the bundle is not.
+# CFBundleExecutable names a file, not a label, and the two have to agree —
+# renaming the plist without renaming this is an app macOS reports as broken,
+# because it looks for an executable that is not there.
+cp "$BIN/Imark" "$APP/Contents/MacOS/Margin"
 cp "$ROOT/Support/Imark-Info.plist" "$APP/Contents/Info.plist"
 if [ "$DEV" -eq 1 ]; then
 	# Renamed and re-identified in place: two bundles with the same id would

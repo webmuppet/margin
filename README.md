@@ -336,8 +336,8 @@ inside the app: **Margin › About Margin** shows it.
 Margin is a fork of [Imark](https://github.com/migsilva89/imark) by Miguel
 Silva, used and modified under the MIT licence — see [`NOTICE.md`](NOTICE.md)
 for what is different and what deliberately is not. The renderer, the comment
-format, the Quick Look extension and the review handshake are all his work.
-This fork is not endorsed by or affiliated with him.
+format, the Quick Look extension and the review handshake are all their
+work. This fork is not endorsed by or affiliated with them.
 
 [MIT](LICENSE) throughout — use it, change it, redistribute it, just keep the
 copyright notice.
