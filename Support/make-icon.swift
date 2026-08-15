@@ -8,16 +8,9 @@
 // needs neither this nor sips; the source is committed so the .icns can always
 // be rebuilt from something that is not itself a build artefact.
 //
-// The whole of what this does is put the artwork on Apple's grid. A macOS app
-// icon is not full-bleed: the rounded body occupies 824 of a 1024 canvas, and
-// Mail, Notes and Safari all measure at exactly that. The remaining space is
-// not waste — it is where the system's drop shadow falls, and it is what makes
-// every icon in a Finder window look like it belongs to the same set.
-//
-// An iOS icon is the opposite: full-bleed, with the OS applying the mask. Ours
-// was exported that way, and dropped into a .icns unchanged it came out 24%
-// larger than its neighbours with nowhere for a shadow to go — which reads as
-// flat and pasted on rather than sitting on the surface.
+// It cuts the ten sizes and does nothing else. See `ratio` for why: two
+// attempts at putting the artwork on Apple's grid both made it read smaller
+// than the icons beside it, and the reason turned out not to be its size.
 
 import AppKit
 
@@ -43,14 +36,24 @@ else {
 /// The artwork, inset onto the grid and given the shadow the inset makes room
 /// for. Drawn at each size rather than once and downscaled: a shadow scaled
 /// down with the image loses its softness and reads as a grey edge.
-/// How much of the canvas the body fills, which is not one number.
+/// How much of the canvas the artwork fills.
 ///
-/// Measured out of Mail.app: 75% at 16 and 32, 80% from 128 up. The small
-/// sizes give back more of the canvas because a proportional shadow there is
-/// sub-pixel — the padding would be doing nothing but making the icon smaller
-/// than its neighbours in a Finder list, which is exactly where the small
-/// representations get drawn.
-func ratio(_ size: Int) -> CGFloat { size <= 32 ? 0.75 : 824 / 1024 }
+/// All of it. Apple's own icons sit at 75–80% and leave the rest for the
+/// system's shadow, and matching that number exactly — measured against Mail
+/// and MarkEdit at both the sizes a Finder list draws — still read as smaller
+/// than everything around it. Twice.
+///
+/// The reason is not geometry. Every neighbour in that row is a light, high
+/// contrast icon on a dark list background, and this one is near-black on
+/// near-black: its outer edge disappears into the row, so what registers as
+/// "the icon" is only the pale marks inside it. Shrinking the body to hit a
+/// grid made the visible part smaller still.
+///
+/// So the artwork is drawn at full size, which is the most that can be done
+/// about it here. The rest is a question about the artwork — a lighter ground,
+/// or a rim that separates it from the row — and that is not a decision to
+/// make on somebody's behalf inside a build script.
+func ratio(_ size: Int) -> CGFloat { 1.0 }
 
 func render(_ size: Int) -> Data? {
     let canvas = CGFloat(size)
@@ -65,14 +68,7 @@ func render(_ size: Int) -> Data? {
 
     ctx.interpolationQuality = .high
     ctx.clear(CGRect(x: 0, y: 0, width: canvas, height: canvas))
-    // Proportional to the canvas, so a 16px icon is not carrying a 24px blur.
-    ctx.setShadow(
-        offset: CGSize(width: 0, height: -canvas * 0.01),
-        blur: canvas * 0.023,
-        color: NSColor.black.withAlphaComponent(0.28).cgColor
-    )
-    // Nudged up by half the shadow's drop so the body stays optically centred.
-    ctx.draw(artwork, in: CGRect(x: inset, y: inset + canvas * 0.008, width: body, height: body))
+    ctx.draw(artwork, in: CGRect(x: inset, y: inset, width: body, height: body))
 
     guard let image = ctx.makeImage() else { return nil }
     return NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
@@ -108,4 +104,4 @@ guard iconutil.terminationStatus == 0 else { exit(iconutil.terminationStatus) }
 
 try? FileManager.default.removeItem(at: iconset)
 let bytes = (try? FileManager.default.attributesOfItem(atPath: icns.path))?[.size] as? Int ?? 0
-print("AppIcon.icns — \(wanted.count) sizes, on Apple's grid (75% at 16 and 32, 80.5% above), \(bytes) bytes")
+print("AppIcon.icns — \(wanted.count) sizes, artwork at full size, \(bytes) bytes")
