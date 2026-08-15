@@ -93,7 +93,7 @@ final class Shooter: NSObject, WKNavigationDelegate {
                   let rep = NSBitmapImageRep(data: tiff),
                   let png = rep.representation(using: .png, properties: [:])
             else {
-                FileHandle.standardError.write(Data("snapshot falhou: \(error?.localizedDescription ?? "?")\n".utf8))
+                FileHandle.standardError.write(Data("snapshot failed: \(error?.localizedDescription ?? "?")\n".utf8))
                 exit(1)
             }
             try? png.write(to: output)

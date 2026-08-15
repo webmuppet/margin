@@ -140,4 +140,4 @@ ${p.text ? `<pre>${escape(p.text)}</pre>` : ''}`,
 
 fs.writeFileSync(path.join(root, 'Support', 'Credits.html'), credits)
 
-console.log(`licenças → THIRD-PARTY.md e Support/Credits.html (${list.length} pacotes)`)
+console.log(`licences → THIRD-PARTY.md and Support/Credits.html (${list.length} packages)`)
