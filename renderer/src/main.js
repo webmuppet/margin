@@ -816,6 +816,13 @@ async function render({ markdown, path, theme, preview, rail }) {
   // that were there a moment ago. Held rather than derived on demand because
   // the margin control looks this up on every mousemove.
   lastSegments = editableSegments()
+  // A drag cannot survive the document being rebuilt under it: the element it
+  // was carrying is detached and its line numbers describe a file that no
+  // longer exists. dragend normally clears this, and normally is not a
+  // guarantee — a commit re-renders without one, and a stale drag would then
+  // drop a range from the previous version of the document into this one.
+  dragging = null
+  clearDropMarks()
   renderMath(root)
   activeHeadings = buildToc(root)
   buildRail(root)
@@ -1026,6 +1033,28 @@ const landingFor = (block, below) => {
 /// cannot be dropped inside itself, and a heading cannot be dropped inside its
 /// own section — both ask for the lines to end up before themselves.
 const canLand = (landing) => !!dragging && canMove(dragging.unit, landing)
+
+/// The block a point belongs to, whether or not it is inside one.
+///
+/// blockAtHeight answers only for points inside a block's own rectangle, which
+/// is right for the `+` — it appears beside something. A drop has to answer
+/// everywhere, including the gaps between blocks, because a gap is what you aim
+/// at when putting something between two things.
+function blockNearest(clientY) {
+  let best = null
+  let nearest = Infinity
+  for (const block of documentBlocks()) {
+    const box = block.getBoundingClientRect()
+    const away = clientY < box.top ? box.top - clientY
+      : clientY > box.bottom ? clientY - box.bottom : 0
+    if (away < nearest) {
+      nearest = away
+      best = block
+    }
+    if (away === 0) break
+  }
+  return best
+}
 
 let dragging = null
 
@@ -1441,32 +1470,57 @@ function setUpBlockPlus() {
     clearDropMarks()
   })
 
-  content().addEventListener('dragover', (event) => {
-    if (!dragging) return
-    const block = event.target instanceof Element ? topLevelBlock(event.target) : null
-    if (!block) return
+  // A drop only happens where dragover called preventDefault, and the first
+  // version of this returned early three different ways before reaching it —
+  // over a gap between two blocks, over a note card, over your own block. The
+  // gaps are exactly where you aim when putting something between two things,
+  // so the whole column flickered between live and dead as the pointer crossed
+  // them. It worked often enough to look like bad luck rather than a rule.
+  //
+  // So the pointer no longer has to be inside anything. Anywhere over the
+  // document is a drop, and the block it refers to is the nearest one
+  // vertically — the same answer the `+` gives for the same reason.
+  const dropTarget = (event) => {
+    const block = blockNearest(event.clientY)
+    if (!block) return null
     const box = block.getBoundingClientRect()
     const below = event.clientY > box.top + box.height / 2
     const landing = landingFor(block, below)
-    if (landing === null || !canLand(landing)) return
+    return landing === null ? null : { block, below, landing }
+  }
 
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-    clearDropMarks()
-    block.classList.add(below ? 'drop-below' : 'drop-above')
+  for (const name of ['dragenter', 'dragover']) {
+    content().addEventListener(name, (event) => {
+      if (!dragging) return
+      // Unconditionally, so the drop is never refused by the browser before it
+      // reaches us. Whether it is a landing we will act on is our question, and
+      // it is answered by whether a line is drawn.
+      event.preventDefault()
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+
+      const target = dropTarget(event)
+      clearDropMarks()
+      if (!target || !canLand(target.landing)) return
+      target.block.classList.add(target.below ? 'drop-below' : 'drop-above')
+    })
+  }
+
+  content().addEventListener('dragleave', (event) => {
+    // Only when the pointer has actually left the document, not when it crosses
+    // between two blocks inside it — dragleave fires on every boundary.
+    if (dragging && !content().contains(event.relatedTarget)) clearDropMarks()
   })
 
   content().addEventListener('drop', (event) => {
     if (!dragging) return
-    const block = event.target instanceof Element ? topLevelBlock(event.target) : null
-    if (!block) return
-    const box = block.getBoundingClientRect()
-    const landing = landingFor(block, event.clientY > box.top + box.height / 2)
-    clearDropMarks()
-    if (landing === null || !canLand(landing)) return
-
     event.preventDefault()
-    const verdict = commitMove(dragging.unit, landing)
+    const target = dropTarget(event)
+    clearDropMarks()
+    // Dropped on itself, which is not a move. Nothing to say about it: the
+    // absence of a line was already saying so.
+    if (!target || !canLand(target.landing)) return
+
+    const verdict = commitMove(dragging.unit, target.landing)
     if (!verdict.ok) reportRefusal(verdict.reason)
   })
 
