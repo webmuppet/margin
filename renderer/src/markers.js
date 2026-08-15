@@ -67,6 +67,32 @@ export function extractComments(body, lineOffset = 0) {
   return { body: lines.join('\n'), comments }
 }
 
+/// The lines that open a note and never close it.
+///
+/// `extractComments` steps over these deliberately — an unterminated block is
+/// somebody's half-typed comment and swallowing the rest of the document would
+/// be worse. That is the right call while reading. It is the wrong thing to
+/// write: the note stops being a note and its text becomes visible prose in the
+/// middle of the document, with no error and nothing to undo but a guess. So a
+/// commit has to be able to ask about them separately.
+export function danglingOpenings(source) {
+  const lines = source.split('\n')
+  const found = []
+
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!OPEN.test(lines[index])) continue
+    let end = index
+    while (end < lines.length && !lines[end].includes('-->')) end += 1
+    if (end >= lines.length) {
+      found.push(index)
+      break
+    }
+    index = end
+  }
+
+  return found
+}
+
 /// A note hard-wrapped in the file is one paragraph, not one line per line.
 /// Single newlines become spaces; a blank line still starts a paragraph.
 export const unwrap = (text) =>
