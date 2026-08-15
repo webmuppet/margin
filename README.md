@@ -26,11 +26,12 @@
 <p align="center"><em>Comment on anything. The note goes into the <code>.md</code> file.</em></p>
 
 > [!NOTE]
-> Imark reads; it does not edit. Comments are the one thing it writes, and they go into the document itself — see [Comments](#comments). For everything else the *Open in* button hands the file to Cursor, VS Code, Sublime, Zed, or whatever else you have installed.
+> Imark is a reader that will let you fix what you are reading. A block at a time: open one as markdown, correct it, move it, or take it out — see [Editing in place](#editing-in-place). It is not a text editor and is not trying to become one; for anything larger the *Open in* button hands the file to Cursor, VS Code, Sublime, Zed, or whatever else you have installed. One switch in Settings turns all of it off.
 
 ## What it does
 
 - **Comments in the file** — select, comment, edit or delete, and the note lives in the document as an HTML comment, so it survives being emailed, committed, or opened in anything else. `⌘Z` undoes any of it
+- **Editing in place** — open any block as its own markdown and put it back, delete the one under the pointer, or drag it somewhere else. A heading takes its section with it and numbered headings renumber themselves. `⌘Z` covers all of it, and Settings turns it off
 - **Quick Look previews** — the space bar in the Finder renders the document, not raw text, using the same engine as the app
 - **Live reload** — saving in your editor updates the view in under 300ms, keeping your scroll position, and it survives the delete-and-rename that editors call an atomic save
 - **Foldable outline** — headings in the sidebar, with sections you can collapse; past twenty entries it opens folded, so a changelog is one row per version
@@ -39,6 +40,7 @@
 - **The folder and the recents** — every `.md` beside the open document, plus the last five you opened from anywhere else
 - **Everything GitHub-flavoured** — tables, task lists, footnotes, front matter as a header card, syntax highlighting, Mermaid diagrams, KaTeX maths
 - **Actions on a selection** — comment on it, translate it on device, or search the web for it in your default browser
+- **Notes where the words are** — read past an underlined quote and its note appears over the phrase it is about, then goes when you move on
 - **Find with a counter** — `⌘F` highlights every hit and tells you which one you are on
 - **Tabs** — several documents in one window, with everything macOS gives a tabbed app: `⌘⇧[` and `⌘⇧]`, drag a tab out, Merge All Windows
 - **Offline where it counts** — documents render with every request blocked by a content security policy, KaTeX fonts embedded, remote images refused on purpose
@@ -132,6 +134,51 @@ Rows move in batches of 500, and the deadline is generous but achievable.
 > Achievable with which team? This needs a number, not an adjective.
 ```
 
+## Editing in place
+
+Hover any block and three controls appear in the margin, in the order you meet
+them: comment on it, open it as markdown, move it.
+
+```
+ +   ← comment on this block
+</>  ← open it as markdown
+ ⠿   ← drag to move it
+```
+
+**Open it as markdown.** The `</>` control replaces the rendered block with the
+lines of the file it was built from. Correct the typo, press `⌘↵`, and the block
+is written back and re-rendered. `Esc` abandons it, *Done* and clicking away
+both save. A note's own markdown opens the same way from the `</>` on its card,
+which is how you fix a mistyped `quote=` or an attribute the composer does not
+offer — without deleting the note and writing it again.
+
+**Delete it.** `⌫` removes the block under the pointer, and the blank line it
+would otherwise leave behind. Nothing asks first; `⌘Z` puts it back, ten deep.
+
+**Move it.** Drag the grip, or press `⌥↑` / `⌥↓`. A heading carries its whole
+section — everything under it to the next heading of the same or higher level —
+and headings written as `## 1. Title` are renumbered afterwards, per level. A
+block always carries the notes written about it, which matters more than it
+sounds: a note anchors to the block it physically follows, so one left behind
+would quietly become a note about whatever ended up above it.
+
+Only the grip is draggable. A draggable block would take every drag that starts
+inside it, and a drag inside a paragraph is you selecting the words you want to
+comment on.
+
+> [!IMPORTANT]
+> Every edit goes through the same door a comment does: the whole document is
+> put on the undo stack first, and the write is refused outright if the file
+> changed on disk since Imark read it. An edit that would break a note — a
+> deleted `-->`, one typed into the middle of a note's body, an opening that
+> never closes — is refused with a message naming the note, and what you typed
+> stays on screen.
+
+**Settings › General › Editing** turns all three off together. Off, the controls
+are gone and `⌫` does nothing. Comments are not covered by the switch and are
+not meant to be: they go through their own composer and have always been the one
+thing this app writes.
+
 ## Reviewing an agent's work
 
 A plan from a coding agent is markdown. So is a diff, once it is wrapped in a
@@ -173,18 +220,19 @@ commands.
 
 | Where | What, and when |
 |---|---|
-| The `.md` you are reading | only when you comment. Written to a temporary file beside it and moved into place; it refuses to save at all if the document changed on disk since Imark read it |
+| The `.md` you are reading | when you comment, and when you edit, delete or move a block. Written to a temporary file beside it and moved into place; it refuses to save at all if the document changed on disk since Imark read it. Settings turns everything but commenting off |
 | `~/.imark/pending` | while an agent is waiting on a review: which document, and what you decided. Deleted when the agent reads it |
-| `~/Library/Preferences/pt.miguelsilva.imark.plist` | your settings — theme, text size, width, the update check |
+| `~/Library/Preferences/pt.miguelsilva.imark.plist` | your settings — theme, text size, width, whether blocks can be edited, the update check |
 | `~/.claude/skills`, `~/.codex/skills`, … | only if you accept the offer to set up your coding agents, and only the files the alert names |
 | The network | one request a day to `api.github.com` asking whether a newer version exists. A version number travels, nothing of yours does, and Settings turns it off |
 
 > [!IMPORTANT]
-> Comments are the only feature that writes to your documents. Imark keeps the
-> last ten states of a document, so `⌘Z` puts any of them back. If it ever
-> damages a file, [open an issue](../../issues/new?template=bug_report.yml)
-> before anything else — that is the one bug worth interrupting whatever else is
-> happening.
+> Commenting and editing are the only features that write to your documents, and
+> both go the same way: an atomic replace that refuses if the file moved
+> underneath it. Imark keeps the last ten states of a document, so `⌘Z` puts any
+> of them back. If it ever damages a file, [open an
+> issue](../../issues/new?template=bug_report.yml) before anything else — that is
+> the one bug worth interrupting whatever else is happening.
 
 ## Keyboard shortcuts
 
@@ -196,7 +244,9 @@ commands.
 | `⌘[` / `⌘]` | Back / forward | `⌘R` | Reload |
 | `⌘+` / `⌘-` / `⌘0` | Text size | `⌘⇧R` | Reveal in Finder |
 | `⌘P` | Print or export PDF | `⌘⇧C` | Show all comments |
-| `⌘'` / `⌘⇧'` | Next / previous comment | `⌘Z` | Undo the last comment change |
+| `⌘'` / `⌘⇧'` | Next / previous comment | `⌘Z` | Undo the last change |
+| `⌫` | Delete the block under the pointer | `⌥↑` / `⌥↓` | Move it up or down |
+| `⌘↵` | Save the block you are editing | `Esc` | Abandon it |
 | `⌘/` | This table, in the app | | |
 
 `⌘/` opens the same list inside the app, built by reading the menu bar rather
@@ -243,9 +293,26 @@ it, with no error and no log entry.
 
 ### What does `⌘Z` undo?
 
-The last change to the document — a note written, edited or deleted — up to ten
-deep. Each one is a snapshot of the whole file taken before the change. It only
-covers changes Imark made; edits from your own editor are your editor's to undo.
+The last change to the document — a note written, edited or deleted, a block
+edited, deleted or moved — up to ten deep. Each one is a snapshot of the whole
+file taken before the change, and the Edit menu names the one it will put back.
+It only covers changes Imark made; edits from your own editor are your editor's
+to undo.
+
+### Can I stop it editing my files?
+
+Yes. **Settings › General › Editing** turns off the way into a block's markdown,
+the way into a note's, and the delete key, in one switch. Commenting is not
+covered by it — that has always been what the app is for, and it goes through
+its own composer.
+
+### What happens to a note when I move the block it is about?
+
+It goes with it. A note anchors to the block it physically follows, so a move
+carries the block, its notes, and — if it is a heading — everything in its
+section. Editing away the words a note quoted is a different thing: the note
+stays and is drawn as an orphan, which is a state to be shown rather than
+prevented.
 
 ### What happens if two people comment on the same words?
 

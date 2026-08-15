@@ -136,8 +136,12 @@ Two things it cannot tell you, both of which stay manual:
 
 ## What this is not
 
-- **Not an editor.** Imark reads. Comments are the one thing it writes, and that
-  is deliberate — your editor is better at editing than this will ever be.
+- **Not a text editor.** Imark reads, and will let you fix what you are reading:
+  a block at a time, through a control in the margin, with the whole document on
+  the undo stack and a switch in Settings that turns it off. That is the whole of
+  it. A cursor in the document, find-and-replace, anything that treats the file
+  as text rather than as blocks — your editor is better at all of it than this
+  will ever be, and *Open in* is one press away.
 - **Not cross-platform.** It is AppKit and a WebView, and the Quick Look
   extension only exists on macOS.
 - **Not a vault.** No database, no index, no folder structure it insists on.
