@@ -1,0 +1,181 @@
+<!doctype html>
+<!--
+  The renderer, in a browser, with a stand-in for Swift.
+
+    cd renderer && npm ci && node build.mjs      # Resources/ must exist first
+    python3 -m http.server 8899
+    open http://localhost:8899/Support/harness.html
+
+  Why this exists. Everything the renderer does that can be checked without a
+  screen is checked by the suites in this folder. What is left needs layout and
+  paint, and there is no way to fake either: an element can have the right
+  rectangle, opacity 1 and visibility visible, and still never be drawn. That is
+  not a hypothetical — it is how the source control behaved inside a <table>,
+  and a headless DOM would have called it fine, because a headless DOM has no
+  paint step to disagree with.
+
+  So this is deliberately not automated. It is the page, the real bundle, and a
+  list of things to look at, in the same spirit as the review handshake that
+  CONTRIBUTING says has to be pressed by hand before a release.
+
+  It renders through imark's own bundle, so what you are looking at is what the
+  app shows — with one difference, stated because it matters: the app runs in
+  WKWebView and your browser is not that. Anything that turns on engine
+  behaviour still has to be confirmed in a build.
+-->
+<html lang="en" data-width="normal" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../Resources/bundle.css" />
+    <title>Imark renderer harness</title>
+    <style>
+      .harness {
+        max-width: 42rem;
+        margin: 4rem auto 6rem;
+        padding: 1rem 1.25rem;
+        font: 13px/1.6 -apple-system, system-ui, sans-serif;
+        color: #6e6e73;
+        border: 1px solid #e5e5ea;
+        border-radius: 10px;
+      }
+      .harness h2 { margin: 0 0 0.5rem; font-size: 13px; color: #1d1d1f; }
+      .harness ol { margin: 0.5rem 0 1rem 1.1rem; padding: 0; }
+      .harness li { margin-bottom: 0.4rem; }
+      .harness code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+      .harness pre {
+        max-height: 11rem; margin: 0; padding: 0.6rem 0.75rem; overflow: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+        background: #f7f7f8; border-radius: 6px;
+      }
+      .harness button {
+        padding: 3px 10px; font: inherit; font-size: 12px;
+        background: #fff; border: 1px solid #e5e5ea; border-radius: 6px; cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="content"></main>
+
+    <section class="harness">
+      <h2>What to look at</h2>
+      <ol>
+        <li>Hover each block in turn — paragraph, heading, <strong>table</strong>, list,
+            blockquote, code. The <code>&lt;/&gt;</code> and the <code>+</code> appear
+            together, and <strong>line up down the margin</strong>. A table is the one
+            that has been broken before, and a list item is the one that drifts.</li>
+        <li>Open a block, change it, press <code>⌘↵</code>. The document below re-renders
+            from the edited text, the way it does when Swift writes the file.</li>
+        <li><strong>Then hover another block.</strong> The control has to still be there.
+            It once vanished for the rest of the session after the first successful edit.</li>
+        <li>Open a block and press <code>Esc</code>; open one and press <em>Done</em>;
+            open one and click away. All three leave the document readable.</li>
+        <li>Click a note's dot, then the <code>&lt;/&gt;</code> on its card. The whole
+            marker shows, <strong>closing <code>--&gt;</code> and all</strong>, and the
+            card keeps its buttons.</li>
+        <li>Break a note on purpose — delete its <code>--&gt;</code>, or type one into the
+            middle. The edit is refused, the reason names the note, and what you typed is
+            still in the box.</li>
+        <li>Open the list that has a note inside it. Hovering above the note offers the
+            items above it; below the note offers the item below. Neither leaves an empty
+            bullet behind.</li>
+        <li>Reach the control with <kbd>Tab</kbd> alone and open it with <kbd>Enter</kbd>.
+            This is the one no automation reaches: a driven browser never has system
+            focus, so <code>:focus</code> cannot match and Tab never arrives.</li>
+      </ol>
+      <p>
+        <button type="button" id="reset">Start again</button>
+        &nbsp;What the page sent Swift, newest last:
+      </p>
+      <pre id="log">nothing yet</pre>
+    </section>
+
+    <script>
+      // The fixture is the awkward cases, not a tour of markdown: a table, a list
+      // with a note written into the middle of it, a note on a paragraph, and one
+      // block of each kind that has ever been positioned wrongly.
+      const SOURCE = [
+        '# Harness',
+        '',
+        'A paragraph with a note on it.',
+        '',
+        '<!-- imark quote="a note on it" by="harness" at="2026-01-01T00:00Z"',
+        'A note about the paragraph above.',
+        '-->',
+        '',
+        '| column | value |',
+        '|---|---|',
+        '| one | 1 |',
+        '| two | 2 |',
+        '',
+        '- item one',
+        '- item two',
+        '',
+        '<!-- imark quote="item two" by="harness" at="2026-01-01T00:01Z" color="blue"',
+        'A note written inside the list, which stretches the block across it.',
+        '-->',
+        '',
+        '- item three',
+        '',
+        '> A quotation, which has a left border of its own to be confused with.',
+        '',
+        '```js',
+        'const x = 1',
+        '```',
+        '',
+        '## A sub heading',
+        '',
+        'The last paragraph.',
+      ].join('\n')
+
+      let doc = SOURCE
+      const sent = []
+      const log = document.getElementById('log')
+
+      const show = () => {
+        log.textContent = sent.length
+          ? sent.map((m) => JSON.stringify(m)).join('\n')
+          : 'nothing yet'
+        log.scrollTop = log.scrollHeight
+      }
+
+      // Stands in for the Swift side, and the re-render is the important half.
+      // A commit does not close the editor: the file is written and the document
+      // is rebuilt from it, which throws the whole DOM away underneath. Anything
+      // the renderer remembers across that is a bug waiting to happen, and a
+      // harness that only posted the message would never show it.
+      window.webkit = {
+        messageHandlers: {
+          imark: {
+            postMessage(message) {
+              sent.push(message)
+              show()
+              if (message.type !== 'editSource') return
+              const lines = doc.split('\n')
+              lines.splice(message.from, message.to - message.from, ...message.text.split('\n'))
+              doc = lines.join('\n')
+              setTimeout(() => render(), 10)
+            },
+          },
+        },
+      }
+
+      window.harness = { get doc() { return doc }, sent }
+    </script>
+
+    <script src="../Resources/bundle.js"></script>
+
+    <script>
+      const render = () =>
+        window.imark.render({ markdown: doc, path: '/tmp/harness.md', theme: 'light' })
+
+      document.getElementById('reset').addEventListener('click', () => {
+        doc = SOURCE
+        sent.length = 0
+        show()
+        render()
+      })
+
+      render()
+    </script>
+  </body>
+</html>

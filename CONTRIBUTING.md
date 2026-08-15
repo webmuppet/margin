@@ -88,6 +88,39 @@ accessibility permission a terminal does not have. Approve, Send Back, and
 closing the window without deciding have to be tried by hand, in a build, on a
 real review, before a release goes out.
 
+## The renderer in a browser
+
+`Support/harness.html` loads the built bundle in a browser, with a stand-in for
+Swift that writes an edit into its copy of the document and re-renders from it.
+
+```bash
+cd renderer && npm ci && node build.mjs   # Resources/ has to exist first
+python3 -m http.server 8899
+open http://localhost:8899/Support/harness.html
+```
+
+The page carries its own list of what to look at. Its fixture is the awkward
+cases rather than a tour of markdown: a table, a list with a note written into
+the middle of it, and one block of every kind that has been positioned wrongly
+at some point.
+
+It is deliberately not a suite, and the reason is worth keeping. Everything the
+renderer does that can be checked without a screen already is checked, in this
+folder. What is left needs layout and paint, and neither can be faked: an
+element can have the right rectangle, `opacity: 1` and `visibility: visible`,
+and still never be drawn. That is not hypothetical — it is exactly how the
+source control behaved inside a `<table>`, and a headless DOM would have passed
+it, because a headless DOM has no paint step to disagree with. A dispatched
+click needs no hit-testing either, so it passed a scripted test too.
+
+Two things it cannot tell you, both of which stay manual:
+
+- **Keyboard focus.** A driven browser never has system focus, so `:focus`
+  cannot match and `Tab` never reaches the page. Reaching a control by keyboard
+  has to be tried by hand.
+- **The engine.** The app renders in WKWebView and your browser is not that.
+  Anything that turns on engine behaviour is confirmed in a build or not at all.
+
 ## What this is not
 
 - **Not an editor.** Imark reads. Comments are the one thing it writes, and that
