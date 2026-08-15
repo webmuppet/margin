@@ -43,9 +43,18 @@ else {
 /// The artwork, inset onto the grid and given the shadow the inset makes room
 /// for. Drawn at each size rather than once and downscaled: a shadow scaled
 /// down with the image loses its softness and reads as a grey edge.
+/// How much of the canvas the body fills, which is not one number.
+///
+/// Measured out of Mail.app: 75% at 16 and 32, 80% from 128 up. The small
+/// sizes give back more of the canvas because a proportional shadow there is
+/// sub-pixel — the padding would be doing nothing but making the icon smaller
+/// than its neighbours in a Finder list, which is exactly where the small
+/// representations get drawn.
+func ratio(_ size: Int) -> CGFloat { size <= 32 ? 0.75 : 824 / 1024 }
+
 func render(_ size: Int) -> Data? {
     let canvas = CGFloat(size)
-    let body = (canvas * 824 / 1024).rounded()
+    let body = (canvas * ratio(size)).rounded()
     let inset = ((canvas - body) / 2).rounded()
 
     guard let ctx = CGContext(
@@ -99,4 +108,4 @@ guard iconutil.terminationStatus == 0 else { exit(iconutil.terminationStatus) }
 
 try? FileManager.default.removeItem(at: iconset)
 let bytes = (try? FileManager.default.attributesOfItem(atPath: icns.path))?[.size] as? Int ?? 0
-print("AppIcon.icns — \(wanted.count) sizes, artwork at 80.5% on the macOS grid, \(bytes) bytes")
+print("AppIcon.icns — \(wanted.count) sizes, on Apple's grid (75% at 16 and 32, 80.5% above), \(bytes) bytes")
