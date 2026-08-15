@@ -356,12 +356,68 @@ function formatDate(raw) {
 
 function closeCards(except) {
   for (const card of document.querySelectorAll('.note-card')) {
-    if (card !== except) card.hidden = true
+    if (card === except) continue
+    card.hidden = true
+    // Whatever it was opened by, it is shut now. Leaving the mark behind would
+    // make a card somebody clicked open later look like one to close on the
+    // next pointer movement.
+    delete card.dataset.peek
   }
   for (const dot of document.querySelectorAll('.note-dot')) {
     if (!except || dot.dataset.note !== except.dataset.note) dot.classList.remove('open')
   }
 }
+
+/// Shows a note's card, wherever the asking came from.
+///
+/// `peek` marks it as opened by the pointer passing over, which is the only
+/// thing that tells it apart from one somebody opened on purpose — and the two
+/// have to close differently. A card you clicked stays until you dismiss it. A
+/// card that appeared because you read past its underline goes when you move on.
+function openCard(id, { peek } = { peek: false }) {
+  const card = document.querySelector(`.note-card[data-note="${id}"]`)
+  if (!card) return null
+
+  card.hidden = false
+  if (peek) card.dataset.peek = 'true'
+  else delete card.dataset.peek
+
+  const dot = document.querySelector(`.note-dot[data-note="${id}"]`)
+  dot?.classList.add('open')
+  // The card lines up with its own dot, so stacked notes open at the height of
+  // the one you pressed rather than all at the top of the paragraph.
+  card.style.top = dot?.style.top || '0px'
+  placeCard(card)
+  return card
+}
+
+/// Closes only the cards the pointer opened.
+///
+/// Never one somebody clicked, and never one with an editor in it: closing that
+/// would take whatever had been typed into a note's markdown with it, on nothing
+/// more than a pointer moving away.
+function closePeeks(except) {
+  for (const card of document.querySelectorAll('.note-card[data-peek]')) {
+    if (card === except || card.querySelector('.source-box')) continue
+    card.hidden = true
+    delete card.dataset.peek
+    document.querySelector(`.note-dot[data-note="${card.dataset.note}"]`)
+      ?.classList.remove('open')
+  }
+}
+
+/// How long the pointer has to rest before a note appears, and how long it has
+/// to leave before one goes.
+///
+/// The delay in is what stops a document with notes through it flashing cards at
+/// somebody who is only reading. The grace out is the same problem the `+` has:
+/// the way to the card leads across the margin, which belongs to neither, and
+/// hiding on the first frame outside means the card goes exactly as you reach it.
+const PEEK_DELAY = 140
+const PEEK_GRACE = 220
+
+let peekIn = 0
+let peekOut = 0
 
 /// One listener on the document rather than one per note: the notes are rebuilt
 /// on every render, and per-note listeners would leak with them.
@@ -374,20 +430,65 @@ export function installCommentHandlers() {
     }
     event.preventDefault()
     event.stopPropagation()
+    clearTimeout(peekIn)
+    clearTimeout(peekOut)
 
     const id = trigger.dataset.note
     const card = document.querySelector(`.note-card[data-note="${id}"]`)
     if (!card) return
 
-    const opening = card.hidden
+    // A card being peeked at is on screen but not yet yours. Clicking it is
+    // asking to keep it, not asking to put it away again — treating it as
+    // already open made the underline you had just hovered close on the click.
+    const opening = card.hidden || card.dataset.peek === 'true'
     closeCards(opening ? card : null)
-    card.hidden = !opening
-    const dot = document.querySelector(`.note-dot[data-note="${id}"]`)
-    dot?.classList.toggle('open', opening)
-    // The card lines up with its own dot, so stacked notes open at the height
-    // of the one you pressed rather than all at the top of the paragraph.
-    card.style.top = dot?.style.top || '0px'
-    if (opening) placeCard(card)
+    if (opening) {
+      openCard(id, { peek: false })
+    } else {
+      card.hidden = true
+      delete card.dataset.peek
+      document.querySelector(`.note-dot[data-note="${id}"]`)?.classList.remove('open')
+    }
+  })
+
+  // Reading past an underline shows what was written about it. The click is
+  // still there and still means keep this open; hovering only saves the press
+  // for the common case, which is wanting to know what the note says.
+  document.addEventListener('mouseover', (event) => {
+    const target = event.target
+    if (!(target instanceof Element)) return
+
+    // Over the card itself, or on the way to it. Either way it stays.
+    if (target.closest('.note-card')) {
+      clearTimeout(peekOut)
+      return
+    }
+
+    const trigger = target.closest('.note-dot, .note-anchor')
+    if (!trigger) return
+    // Every note is already open and meant to stay that way.
+    if (isReviewing()) return
+
+    clearTimeout(peekOut)
+    const id = trigger.dataset.note
+    const card = document.querySelector(`.note-card[data-note="${id}"]`)
+    if (!card || !card.hidden) return
+
+    clearTimeout(peekIn)
+    peekIn = setTimeout(() => {
+      closePeeks(null)
+      openCard(id, { peek: true })
+    }, PEEK_DELAY)
+  })
+
+  document.addEventListener('mouseout', (event) => {
+    const target = event.target
+    if (!(target instanceof Element)) return
+    if (!target.closest('.note-dot, .note-anchor, .note-card')) return
+
+    clearTimeout(peekIn)
+    clearTimeout(peekOut)
+    peekOut = setTimeout(() => closePeeks(null), PEEK_GRACE)
   })
 
   document.addEventListener('keydown', (event) => {
