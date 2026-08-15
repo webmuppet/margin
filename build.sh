@@ -104,7 +104,7 @@ fi
 if [ -f "$ROOT/Support/AppIcon.icns" ]; then
 	cp "$ROOT/Support/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 else
-	echo "warning: no icon — run 'swift Support/make-icon.swift'" >&2
+	echo "warning: no icon — run 'Support/make-icon.sh'" >&2
 fi
 
 # The agent integration travels inside the app: the script that does the work,

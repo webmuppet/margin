@@ -65,10 +65,13 @@ compiles it and `build.sh` assembles the `.app`.
 `plugin/` is the single source for the agent files, copied into the app at build
 time. Editing the copy inside `Imark.app` changes nothing in the repo.
 
-The app icon is drawn in code from the rules in the design document:
+The app icon is `Support/AppIcon.png`, a 1024 master. The `.icns` the build
+copies in is generated from it, and both are committed — the master so the
+icon can be rebuilt from something that is not a build artefact, the `.icns`
+so a build needs neither the script nor `sips`:
 
 ```bash
-swift Support/make-icon.swift
+Support/make-icon.sh
 ```
 
 Two helpers exist for looking at the UI without photographing the whole desktop.
