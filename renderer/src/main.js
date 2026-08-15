@@ -953,7 +953,8 @@ document.addEventListener('imark:editMarker', (event) => {
     (segment) => segment.kind === 'marker' && segment.from === line
   )
   const card = button.closest('.note-card')
-  if (!piece || !card || card.querySelector('.source-box')) return
+  // One editor at a time anywhere in the document, not just on this card.
+  if (!piece || !card || editorIsOpen()) return
 
   // The card's own rendering of the note goes; its controls stay. A way in that
   // disappears once you are through it leaves no way back out.
@@ -1149,7 +1150,15 @@ let sourceButton = null
 /// While an editor is open the margin stops offering another one. Two open at
 /// once is two unsaved edits to the same file, and the second to be committed
 /// would be spliced against lines the first had already moved.
-let openEditor = null
+///
+/// Asked of the document rather than remembered in a variable, and that is the
+/// whole point. A flag has to be cleared by whoever closes the editor — and the
+/// commonest way an editor ends is not being closed at all: the edit is written,
+/// Swift re-renders from the file, and the box goes out with the old DOM without
+/// anything running. The flag stayed set, the margin stopped offering the
+/// control, and the feature vanished for the rest of the session after the first
+/// successful edit. Nothing to keep in step means nothing to leave stale.
+const editorIsOpen = () => !!content().querySelector('.source-box')
 
 /// Where the two margin buttons sit, as offsets from the block's left edge. The
 /// `+` keeps the 34 it has always had; source sits outside it. Both are clamped
@@ -1186,7 +1195,7 @@ function showPlus(block) {
     (segment) => segment.kind === 'content'
       && elementsFor(content(), segment).some((el) => block.contains(el))
   )
-  sourceButton.style.display = piece && !openEditor ? 'flex' : 'none'
+  sourceButton.style.display = piece && !editorIsOpen() ? 'flex' : 'none'
   sourceButton.style.top = `${rect.top + 1}px`
   sourceButton.style.left = `${Math.max(4, rect.left - SOURCE_OFFSET)}px`
 }
@@ -1222,7 +1231,7 @@ function setUpBlockPlus() {
 
   sourceButton.addEventListener('click', () => {
     const block = plusTarget
-    if (!block || openEditor) return
+    if (!block || editorIsOpen()) return
     const piece = segmentAt(block, lastPointerY)
     if (!piece) return
 
@@ -1232,7 +1241,7 @@ function setUpBlockPlus() {
     const elements = withEmptyAncestors(found, block)
 
     hidePlus()
-    openEditor = openSourceEditor({
+    openSourceEditor({
       segment: piece,
       hide: elements,
       label: 'Markdown source for this block',
@@ -1242,7 +1251,6 @@ function setUpBlockPlus() {
       // The margin control follows the pointer and hides while this is open, so
       // the editor has to carry its own way back.
       showBack: true,
-      onClosed: () => { openEditor = null },
     })
   })
 
