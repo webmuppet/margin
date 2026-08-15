@@ -94,17 +94,18 @@ enum Menu {
 
     private static func editMenu() -> NSMenu {
         let menu = NSMenu(title: "Edit")
-        // `undo:` rather than the controller's own selector, so the responder
-        // chain does the routing. A focused text editor — the comment composer,
-        // or a block open as markdown — implements `undo:` and handles it
-        // first; only when nothing editable has focus does it reach the window
-        // controller and undo a change to the document.
-        //
-        // Bound straight to the controller, ⌘Z while you were typing reverted
-        // the last comment or block edit instead of your last keystroke, which
-        // is a destructive answer to a key nobody presses expecting one.
-        menu.addItem(withTitle: "Undo", action: #selector(DocumentWindowController.undo(_:)), keyEquivalent: "z")
-        let redo = menu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        // The controller's own selector, not `undo:`. `undo:` reads better and
+        // is wrong here: NSWindow answers it out of its own undo manager and
+        // becomes the target before the chain reaches this app's, so binding
+        // Undo to it stopped the document undo running at all. The controller
+        // decides instead, and it can, because the page tells it whether a
+        // block is open with the keyboard in it.
+        menu.addItem(withTitle: "Undo", action: #selector(DocumentWindowController.undoComment(_:)), keyEquivalent: "z")
+        let redo = menu.addItem(
+            withTitle: "Redo",
+            action: #selector(DocumentWindowController.redoInEditor(_:)),
+            keyEquivalent: "z"
+        )
         redo.keyEquivalentModifierMask = [.command, .shift]
         menu.addItem(.separator())
         // Cut and Paste were missing, and on macOS that is not a cosmetic gap.

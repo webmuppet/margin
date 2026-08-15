@@ -38,6 +38,13 @@ export const ICON_RENDERED
   + 'd="M1.5 8S3.9 3.5 8 3.5 14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8Z"/>'
   + '<circle cx="8" cy="8" r="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>'
 
+/// Tells Swift whether a block or note opened as markdown currently has the
+/// keyboard. Undo is the reason: bound to the window it reverts a change to
+/// the document, which is the wrong answer entirely while somebody is typing.
+const announceFocus = (focused) => {
+  window.webkit?.messageHandlers?.imark?.postMessage({ type: 'editorFocus', focused })
+}
+
 const range = (el) => {
   const raw = el.getAttribute('data-line')
   if (!raw) return null
@@ -138,6 +145,12 @@ export function openSourceEditor({
     area.style.height = `${area.scrollHeight + borders}px`
   }
   area.addEventListener('input', fit)
+
+  // Swift needs to know when the keyboard is in here, because ⌘Z is decided
+  // before the key event ever reaches the page: a menu key equivalent is
+  // matched by the application, so the page cannot claim it by handling it.
+  area.addEventListener('focus', () => announceFocus(true))
+  area.addEventListener('blur', () => announceFocus(false))
 
   const message = document.createElement('p')
   message.className = 'source-error'

@@ -67,6 +67,10 @@ struct TestUndo {
     static func main() {
         let app = NSApplication.shared
         app.setActivationPolicy(.prohibited)
+        // The menu bar is part of what is under test here. An Undo item bound
+        // to a selector nothing routes to compiles, looks right, and does
+        // nothing — which is the bug the last case exists to catch.
+        Menu.install()
 
         do {
             try theOrdinaryCases()
@@ -76,6 +80,7 @@ struct TestUndo {
             try theWholeWayThroughTheWindow()
             try aSourceEditUndoesToo()
             try aMessageIsNotADocument()
+            try undoKnowsWhereTheKeyboardIs()
         } catch {
             failures += 1
             print("FAIL threw: \(error)")
@@ -324,6 +329,47 @@ struct TestUndo {
         check("and Imark's own message did not land in it",
               !(String(data: (try? Data(contentsOf: path)) ?? Data(), encoding: .utf8) ?? "")
                   .contains("Can't read"))
+
+        window.close()
+    }
+
+    /// ⌘Z means two things, and the menu can only send one message.
+    ///
+    /// While a block is open as markdown it has to undo the last keystroke;
+    /// with nothing focused it has to undo the last change to the document.
+    /// The page cannot claim the key — a menu key equivalent is matched before
+    /// the event reaches it — and WKWebView does not answer `undo:`, so the
+    /// responder chain cannot choose either. The page reports focus and the
+    /// controller decides, which is a thing worth a test because binding Undo
+    /// to `undo:` instead looked correct, compiled, and quietly stopped the
+    /// document undo from ever running.
+    static func undoKnowsWhereTheKeyboardIs() throws {
+        print("\n▸ Cmd-Z undoes the document when nothing is being typed in")
+
+        let url = fixture("# A\n\nThe first document.\n", named: "Keys.md")
+        let before = read(url)
+
+        let window = DocumentWindowController(url: url)
+        window.window?.setFrameOrigin(NSPoint(x: -6_000, y: 0))
+        window.showWindow(nil)
+        spin(0.8)
+
+        window.commitSource(SourceEdit(lines: 2..<3, text: "Changed."))
+        spin(0.6)
+        check("the edit landed", read(url).contains("Changed."), read(url))
+
+        // The menu's own item, so this exercises the binding rather than the
+        // method: an action nothing routes to is exactly the failure here.
+        let item = NSApp.mainMenu?.items
+            .first(where: { $0.submenu?.title == "Edit" })?.submenu?
+            .items.first(where: { $0.title == "Undo" })
+        check("the Edit menu has an Undo bound to this app",
+              item?.action == #selector(DocumentWindowController.undoComment(_:)),
+              String(describing: item?.action))
+
+        window.undoComment(nil)
+        spin(0.6)
+        check("and it put the document back", read(url) == before, String(read(url).prefix(40)))
 
         window.close()
     }

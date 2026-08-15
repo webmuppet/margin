@@ -1813,6 +1813,21 @@ window.imark = {
   stepNote,
   editableSegments,
   commitSource,
+  /// Undo and redo inside the open editor. execCommand is on its way out of
+  /// the platform and is still the only thing that reaches a text control's
+  /// own undo stack — the one that already holds what was typed.
+  undoInEditor() {
+    const area = document.querySelector('.source-text')
+    if (!area) return false
+    area.focus()
+    return document.execCommand('undo')
+  },
+  redoInEditor() {
+    const area = document.querySelector('.source-text')
+    if (!area) return false
+    area.focus()
+    return document.execCommand('redo')
+  },
   sourceOf: (segment) => textOf(lastSource, segment),
   exportComments: () => toVisibleText(lastSource),
   /// Opens the note that was just written, so a comment lands visibly rather

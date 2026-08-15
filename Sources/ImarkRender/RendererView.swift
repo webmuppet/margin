@@ -20,6 +20,7 @@ public enum RendererMessage {
     case editSource(SourceEdit)
     case deleteBlock(lines: Range<Int>)
     case moveBlock(document: String)
+    case editorFocus(Bool)
 }
 
 /// A block edited as markdown, on its way back to the file.
@@ -209,6 +210,11 @@ public final class RendererView: NSView {
     public func setEditing(_ on: Bool) {
         call("window.imark.setEditing", on)
     }
+
+    /// Undo and redo inside the open source editor, for the times ⌘Z has to
+    /// mean the last keystroke rather than the last change to the document.
+    public func undoInEditor() { call("window.imark.undoInEditor", []) }
+    public func redoInEditor() { call("window.imark.redoInEditor", []) }
 
     public func find(_ query: String) {
         call("window.imark.find", query)
@@ -441,6 +447,9 @@ public final class RendererView: NSView {
                 if let text = body["document"] as? String {
                     owner.onMessage?(.moveBlock(document: text))
                 }
+
+            case "editorFocus":
+                owner.onMessage?(.editorFocus(body["focused"] as? Bool ?? false))
 
             case "wikilinks":
                 owner.onMessage?(.wikilinks(body["targets"] as? [String] ?? []))

@@ -312,6 +312,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         case .noteCommand(let command):
             perform(command)
 
+        case .editorFocus(let focused):
+            editorHasKeyboard = focused
+
         case .editSource(let edit):
             commitSource(edit)
 
@@ -431,6 +434,11 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         }
     }
 
+    /// ⇧⌘Z, which only an open editor has anything to redo.
+    @objc func redoInEditor(_ sender: Any?) {
+        editorHasKeyboard ? content.renderer.redoInEditor() : NSSound.beep()
+    }
+
     /// Removes the block under the pointer, asked for with the delete key.
     ///
     /// The same door again, and the same undo: a snapshot of the whole document
@@ -547,13 +555,25 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         if let window { alert.beginSheetModal(for: window) } else { alert.runModal() }
     }
 
-    /// The Edit menu's Undo, when nothing editable wanted it.
+    /// Whether a block or note is open as markdown with the keyboard in it.
     ///
-    /// Named for the responder chain rather than for us: a focused text editor
-    /// implements `undo:` too, and gets it first, which is the whole point.
-    @objc func undo(_ sender: Any?) { undoComment(sender) }
+    /// Kept because ⌘Z has to mean two different things and only one side can
+    /// tell them apart. The menu matches its key equivalent before the event
+    /// reaches the page, so the page cannot claim it by handling it; and
+    /// WKWebView does not answer `undo:`, so the responder chain cannot route
+    /// around it either. The page says when it has the keyboard, and this
+    /// decides what the key means.
+    private var editorHasKeyboard = false
 
+    /// ⌘Z. The last keystroke while you are typing, the last change to the
+    /// document when you are not.
+    ///
+    /// Bound to a selector only this class implements, deliberately. Bound to
+    /// `undo:` — which reads better and lets the responder chain choose — the
+    /// window's own undo manager answers first, becomes the target, and the
+    /// document undo silently stops running.
     @objc func undoComment(_ sender: Any?) {
+        if editorHasKeyboard { return content.renderer.undoInEditor() }
         guard !undoStack.isEmpty else { return NSSound.beep() }
         do {
             // The stack knows which file each snapshot belongs to. This window
@@ -620,7 +640,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
     /// the toggle when review mode is on.
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         switch item.action {
-        case #selector(undo(_:)), #selector(undoComment(_:)):
+        case #selector(undoComment(_:)):
             // Named after what it will actually put back, so the menu never
             // offers a vague "Undo" that might mean something else.
             item.title = undoStack.last.map { "Undo \($0.what)" } ?? "Undo"
