@@ -27,6 +27,8 @@
 	<string>Margin</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
+	<key>CFBundleIconName</key>
+	<string>margin-app-icon</string>
 	<key>CFBundleIdentifier</key>
 	<string>nz.co.humanloop.margin</string>
 	<key>CFBundleName</key>

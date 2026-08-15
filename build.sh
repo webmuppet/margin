@@ -103,6 +103,10 @@ fi
 	|| { echo "error: the bundle is not in the app — the renderer did not build" >&2; exit 1; }
 if [ -f "$ROOT/Support/AppIcon.icns" ]; then
 	cp "$ROOT/Support/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+	# The layered icon, which is what macOS 26 draws when it wants the glass
+	# treatment. The .icns beside it is what everything older falls back to.
+	[ -f "$ROOT/Support/Assets.car" ] \
+		&& cp "$ROOT/Support/Assets.car" "$APP/Contents/Resources/Assets.car"
 else
 	echo "warning: no icon — run 'Support/make-icon.sh'" >&2
 fi

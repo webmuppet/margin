@@ -65,14 +65,20 @@ compiles it and `build.sh` assembles the `.app`.
 `plugin/` is the single source for the agent files, copied into the app at build
 time. Editing the copy inside `Imark.app` changes nothing in the repo.
 
-The app icon is `Support/AppIcon.png`, a 1024 master. The `.icns` the build
-copies in is generated from it, and both are committed — the master so the
-icon can be rebuilt from something that is not a build artefact, the `.icns`
-so a build needs neither the script nor `sips`:
+The app icon's source is `margin-app-icon.icon`, an Icon Composer document.
+Apple's own asset compiler turns it into the two things the bundle carries —
+an `.icns` and an `Assets.car` — and both are committed, so an ordinary build
+needs neither the compiler nor this script:
 
 ```bash
 Support/make-icon.sh
 ```
+
+Do not hand-place the artwork onto the macOS grid from a flattened export. It
+was tried twice, at 80.5% and then at Apple's own 75/80 split, and both read as
+smaller than every icon beside them. `actool` produces exactly those numbers
+and looks right, because the grid is not the whole of it: the squircle's curve,
+the gradient, the shadow and the glass treatment come with it.
 
 Two helpers exist for looking at the UI without photographing the whole desktop.
 `Support/shoot.swift` renders a page in an off-screen web view, and
