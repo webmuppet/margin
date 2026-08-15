@@ -47,7 +47,7 @@ agent acts on one it marks it `resolved=` rather than deleting it, and the app
 shows it faded: the record of what was asked, kept where it was asked.
 
 The buttons appear because the agent announced the review first — a small
-request file under `~/.imark/pending/`, answered by the decision and deleted
+request file under `~/.margin/pending/`, answered by the decision and deleted
 the moment it is read. Nothing else opens with buttons, and no copy of your
 document is made anywhere. Only content with no file of its own — a plan piped
 from planning mode, several files at once — opens as a temporary stand-in,

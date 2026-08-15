@@ -91,7 +91,7 @@ screencapture -x -o -l"$(swift Support/window-id.swift Imark)" shot.png
 
 ## The review handshake: test the second round
 
-Everything about a review passes through `~/.imark/pending`, and that directory
+Everything about a review passes through `~/.margin/pending`, and that directory
 is the only state in Imark that outlives the thing that made it. A review that
 is never answered — the session closed, the process killed — leaves its request
 there, and 0.2.2 shipped an app that answered the leftover instead of the

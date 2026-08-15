@@ -196,8 +196,21 @@ Back**, and pressing either one ends the wait on the other side. Closing the
 window without pressing one asks first, because something is waiting for an
 answer and closing is not an answer.
 
+You can also just fix it. A comment carries its own evidence — who wrote it,
+when, and which words it is about — but an edit carries none: correct a typo,
+move a block, delete a paragraph, and the file is simply different. So the
+review records what the document said when it was handed over, and if the prose
+changed the agent is told before it is told anything else:
+
+> **THE REVIEWER ALSO EDITED THE DOCUMENT ITSELF**, not only commented on it.
+> Re-read the file before you do anything with it: what is in it now is what the
+> reviewer wants, and your copy of it is out of date.
+
+Adding a note is not an edit, and does not trigger it. A warning that fired on
+every review would be one nobody read on the reviews that mattered.
+
 The buttons appear on a document an agent asked to have reviewed, and nowhere
-else: the agent leaves a small file in `~/.imark/pending` naming the document
+else: the agent leaves a small file in `~/.margin/pending` naming the document
 before opening it, and Margin writes the decision beside that file. Every other
 `.md` opens exactly as it always did.
 
@@ -219,7 +232,7 @@ commands.
 | Where | What, and when |
 |---|---|
 | The `.md` you are reading | when you comment, and when you edit, delete or move a block. Written to a temporary file beside it and moved into place; it refuses to save at all if the document changed on disk since Margin read it. Settings turns everything but commenting off |
-| `~/.imark/pending` | while an agent is waiting on a review: which document, and what you decided. Deleted when the agent reads it |
+| `~/.margin/pending` | while an agent is waiting on a review: which document, and what you decided. Deleted when the agent reads it |
 | `~/Library/Preferences/pt.miguelsilva.imark.plist` | your settings — theme, text size, width, whether blocks can be edited, the update check |
 | `~/.claude/skills`, `~/.codex/skills`, … | only if you accept the offer to set up your coding agents, and only the files the alert names |
 | The network | one request a day to `api.github.com` asking whether a newer version exists. A version number travels, nothing of yours does, and Settings turns it off |
