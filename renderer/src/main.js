@@ -11,7 +11,7 @@ import renderMathInElement from 'katex/contrib/auto-render'
 import mermaid from 'mermaid'
 
 import wikilink from './wikilink.js'
-import { installSourceEditors } from './editor.js'
+import { installSourceEditors, openSourceEditor } from './editor.js'
 import { segmentsOf, spliceSegment, textOf } from './source.js'
 import { validateCommit } from './validate.js'
 import {
@@ -915,6 +915,39 @@ function blockRanges() {
 export function editableSegments() {
   return segmentsOf(lastSource, blockRanges(), lastComments)
 }
+
+/// Opening a note's own markdown, asked for from its card.
+///
+/// The card renders a note; this shows the lines it was rendered from, so a
+/// mistyped quote or an attribute the composer does not offer can be corrected
+/// in place. It is also the one edit that can break the thing it is editing,
+/// which is why nothing gets written without validateCommit agreeing.
+document.addEventListener('imark:editMarker', (event) => {
+  const { line, button } = event.detail
+  const piece = editableSegments().find(
+    (segment) => segment.kind === 'marker' && segment.from === line
+  )
+  const card = button.closest('.note-card')
+  if (!piece || !card || card.querySelector('.source-box')) return
+
+  // The card's own rendering of the note goes; its controls stay. A way in that
+  // disappears once you are through it leaves no way back out.
+  const hide = [...card.children].filter((child) => !child.classList.contains('note-actions'))
+
+  button.classList.add('is-on')
+  openSourceEditor({
+    segment: piece,
+    hide,
+    label: 'Markdown source for this note',
+    place: (box) => card.insertBefore(box, card.querySelector('.note-actions')),
+    sourceOf: (target) => textOf(lastSource, target),
+    commit: commitSource,
+    onClosed: () => {
+      button.classList.remove('is-on')
+      button.focus()
+    },
+  })
+})
 
 /// Checks an edit and, if it is safe, hands it to Swift to write.
 ///

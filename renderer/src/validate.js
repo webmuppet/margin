@@ -30,6 +30,13 @@ const same = (a, b) => FIELDS.every((field) => a[field] === b[field])
 const describe = (note) =>
   note.quote ? `the note on “${note.quote}”` : `the note at line ${note.line + 1}`
 
+/// `describe` reads as a phrase inside a sentence, which is where it is used
+/// most. Where it starts one it has to look like it.
+const opens = (note) => {
+  const text = describe(note)
+  return text[0].toUpperCase() + text.slice(1)
+}
+
 const refuse = (reason, note) => ({ ok: false, reason, line: note?.line ?? null })
 
 /// Whether an edit may be written.
@@ -86,7 +93,7 @@ export function validateCommit(before, after, segment, replacement) {
       )
       if (swallowed) {
         return refuse(
-          `${describe(edited[0])} is missing its closing \`-->\`, so it runs on and `
+          `${opens(edited[0])} is missing its closing \`-->\`, so it runs on and `
             + 'takes the next note with it. Close it with a line reading `-->`.',
           edited[0]
         )
@@ -103,7 +110,7 @@ export function validateCommit(before, after, segment, replacement) {
     for (const note of inside) {
       if (note.endLine + 1 < to) {
         return refuse(
-          `${describe(note)} closes early: a \`-->\` inside it ends the note there, `
+          `${opens(note)} closes early: a \`-->\` inside it ends the note there, `
             + 'and the rest would appear in the document as ordinary text. '
             + 'Write it as `--&gt;` to keep it inside the note.',
           note

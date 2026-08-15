@@ -1336,6 +1336,10 @@ img[data-blocked] {
   border-radius: var(--radius);
   resize: vertical;
   tab-size: 2;
+  /* Sized in JS from its content; this is the floor so an empty one is still
+     something you can see and aim at. */
+  min-height: calc(var(--step) * 12);
+  overflow: hidden;
 }
 
 .source-text:focus { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -1354,3 +1358,24 @@ img[data-blocked] {
 
 /* The preview panel renders; it does not edit. */
 :root[data-preview='true'] .source-toggle { display: none; }
+
+/* A note's own markdown, opened inside its card. Narrower and quieter than a
+   block's: the card is already an aside in the margin, and a second border
+   around a box inside it would read as a dialogue. */
+.note-card .source-box { margin: 0 0 calc(var(--step) * 2); }
+
+.note-card .source-text {
+  padding: calc(var(--step) * 2);
+  font-size: 11.5px;
+  line-height: 1.5;
+  background: var(--bg);
+  border-color: var(--border);
+  border-radius: 6px;
+}
+
+.note-card .source-text:focus { border-color: var(--note); box-shadow: none; }
+.note-card .source-error { font-size: 11.5px; }
+
+/* The way back out. It is the only control on the card that stays lit, because
+   it is the only one that is currently doing something. */
+.note-action.is-on { color: var(--note); opacity: 1; }

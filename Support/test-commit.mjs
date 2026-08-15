@@ -120,6 +120,10 @@ console.log('\n▸ and what it has to refuse')
     /“opening”/.test(verdict.reason || ''), verdict.reason)
   check('and says to close it',
     /closing `-->`/.test(verdict.reason || ''), verdict.reason)
+  // These messages are read in a box under what somebody just typed, so they
+  // are sentences and have to start like one.
+  check('and it reads as a sentence',
+    /^[A-Z]/.test(verdict.reason || ''), verdict.reason)
   check('the damage it prevented was two notes becoming one',
     extractComments(after, 0).comments.length === 1,
     String(extractComments(after, 0).comments.length))
@@ -144,6 +148,8 @@ console.log('\n▸ and what it has to refuse')
     /“opening”/.test(verdict.reason || ''), verdict.reason)
   check('and says what to write instead',
     /--&gt;/.test(verdict.reason || ''), verdict.reason)
+  check('and it reads as a sentence too',
+    /^[A-Z]/.test(verdict.reason || ''), verdict.reason)
 }
 
 {

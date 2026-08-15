@@ -283,6 +283,7 @@ function buildCard(note, orphan) {
 const ICONS = {
   edit: 'M11.4 2.6a1.7 1.7 0 0 1 2.4 2.4L6 12.8l-3.2.8.8-3.2z',
   delete: 'M3 4.5h10M6.4 4.5V3h3.2v1.5M4.6 4.5l.5 8.4h5.8l.5-8.4',
+  source: 'M6 4 2.5 8 6 12M10 4l3.5 4-3.5 4',
 }
 
 /// Edit and delete live on the card itself. A note you can write but not take
@@ -295,6 +296,11 @@ function cardActions(note) {
 
   for (const [command, label] of [
     ['edit', 'Edit'],
+    // What Edit gives you is the composer, which writes the wording and leaves
+    // the quote, the author and the date exactly as they were. This is the way
+    // to the rest of it — a mistyped quote, a colour, an attribute a later
+    // version wrote — without deleting the note and writing it again.
+    ['source', 'Edit the markdown of'],
     ['delete', 'Delete'],
   ]) {
     const button = document.createElement('button')
@@ -309,6 +315,18 @@ function cardActions(note) {
     button.addEventListener('click', (event) => {
       event.preventDefault()
       event.stopPropagation()
+
+      // Announced rather than handled. The source editor lives on the other
+      // side of the renderer and knows nothing about note cards; this file
+      // knows nothing about editing source. Importing either into the other
+      // would tie the two together for the sake of one button.
+      if (command === 'source') {
+        button.dispatchEvent(new CustomEvent('imark:editMarker', {
+          bubbles: true,
+          detail: { line: note.line, endLine: note.endLine, button },
+        }))
+        return
+      }
       const dot = document.querySelector(`.note-dot[data-note="${note.id}"]`)
       const box = (dot ?? button).getBoundingClientRect()
       bridge({
