@@ -547,6 +547,12 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         if let window { alert.beginSheetModal(for: window) } else { alert.runModal() }
     }
 
+    /// The Edit menu's Undo, when nothing editable wanted it.
+    ///
+    /// Named for the responder chain rather than for us: a focused text editor
+    /// implements `undo:` too, and gets it first, which is the whole point.
+    @objc func undo(_ sender: Any?) { undoComment(sender) }
+
     @objc func undoComment(_ sender: Any?) {
         guard !undoStack.isEmpty else { return NSSound.beep() }
         do {
@@ -614,7 +620,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
     /// the toggle when review mode is on.
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         switch item.action {
-        case #selector(undoComment(_:)):
+        case #selector(undo(_:)), #selector(undoComment(_:)):
             // Named after what it will actually put back, so the menu never
             // offers a vague "Undo" that might mean something else.
             item.title = undoStack.last.map { "Undo \($0.what)" } ?? "Undo"

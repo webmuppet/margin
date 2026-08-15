@@ -94,9 +94,36 @@ enum Menu {
 
     private static func editMenu() -> NSMenu {
         let menu = NSMenu(title: "Edit")
-        menu.addItem(withTitle: "Undo", action: #selector(DocumentWindowController.undoComment(_:)), keyEquivalent: "z")
+        // `undo:` rather than the controller's own selector, so the responder
+        // chain does the routing. A focused text editor — the comment composer,
+        // or a block open as markdown — implements `undo:` and handles it
+        // first; only when nothing editable has focus does it reach the window
+        // controller and undo a change to the document.
+        //
+        // Bound straight to the controller, ⌘Z while you were typing reverted
+        // the last comment or block edit instead of your last keystroke, which
+        // is a destructive answer to a key nobody presses expecting one.
+        menu.addItem(withTitle: "Undo", action: #selector(DocumentWindowController.undo(_:)), keyEquivalent: "z")
+        let redo = menu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        redo.keyEquivalentModifierMask = [.command, .shift]
         menu.addItem(.separator())
+        // Cut and Paste were missing, and on macOS that is not a cosmetic gap.
+        // A key equivalent reaches the responder chain because a menu item
+        // carries it, so with no Paste item ⌘V does not arrive anywhere at all
+        // — which was fine in an app that only ever read, and stopped being
+        // fine the moment it grew a text editor.
+        menu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
         menu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        menu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        // Markdown is plain text and a pasted style would be a lie about what
+        // ends up in the file, but the shortcut is muscle memory and lands in
+        // the same place either way.
+        let plain = menu.addItem(
+            withTitle: "Paste and Match Style",
+            action: #selector(NSTextView.pasteAsPlainText(_:)),
+            keyEquivalent: "v"
+        )
+        plain.keyEquivalentModifierMask = [.command, .option, .shift]
         menu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Find…", action: #selector(DocumentWindowController.performFind(_:)), keyEquivalent: "f")
