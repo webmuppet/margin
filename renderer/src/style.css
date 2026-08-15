@@ -1266,7 +1266,7 @@ img[data-blocked] {
    selecting is how a comment finds the words it is about. */
 
 /* One button that follows the block under the pointer, exactly as the `+` does,
-   and positioned beside it from the same rectangle in the same call. Fixed to
+   and positioned in the same column from the same rectangle in the same call. Fixed to
    the viewport rather than parented to the block, for two reasons found only by
    looking at it: inside the block it was measured from that element's own left
    edge, so it sat 24px further right on a list item than on a paragraph; and

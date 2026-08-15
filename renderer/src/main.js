@@ -1354,10 +1354,16 @@ const editorIsOpen = () => !!content().querySelector('.source-box')
 /// Where the two margin buttons sit, as offsets from the block's left edge. The
 /// `+` keeps the 34 it has always had; source sits outside it. Both are clamped
 /// so a narrow window pushes them into the gutter rather than off the page.
+/// Where the margin controls sit: one column, out from the block's left edge,
+/// stacked in the order you meet them — comment, then source, then move.
+///
+/// One column rather than a row and a stack. The source control used to sit
+/// outside the `+` and the grip under it, which put two of the three on one
+/// line and the third below, and read as a control that had come loose rather
+/// than a set of three.
 const PLUS_OFFSET = 34
-const SOURCE_OFFSET = 62
-/// And how far under the `+` the grip sits.
-const GRIP_DROP = 26
+/// Each control is 22 tall; this is that plus the gap between them.
+const STACK_STEP = 26
 
 function hidePlus() {
   plusTarget?.classList.remove('block-target', 'block-armed')
@@ -1389,17 +1395,17 @@ function showPlus(block) {
     (segment) => segment.kind === 'content'
       && elementsFor(content(), segment).some((el) => block.contains(el))
   )
-  sourceButton.style.display = piece && editingAllowed() && !editorIsOpen() ? 'flex' : 'none'
-  sourceButton.style.top = `${rect.top + 1}px`
-  sourceButton.style.left = `${Math.max(4, rect.left - SOURCE_OFFSET)}px`
+  const column = `${Math.max(4, rect.left - PLUS_OFFSET)}px`
+  const editable = editingAllowed() && !editorIsOpen()
+
+  sourceButton.style.display = piece && editable ? 'flex' : 'none'
+  sourceButton.style.top = `${rect.top + 1 + STACK_STEP}px`
+  sourceButton.style.left = column
 
   if (!gripButton) return
-  // Under the `+` rather than beside it. The row across the margin is already
-  // two wide, and a third would push the outermost one into the rail on a
-  // narrow window — where the outline lives and answers to the pointer itself.
-  gripButton.style.display = editingAllowed() && !editorIsOpen() ? 'flex' : 'none'
-  gripButton.style.top = `${rect.top + 1 + GRIP_DROP}px`
-  gripButton.style.left = `${Math.max(4, rect.left - PLUS_OFFSET)}px`
+  gripButton.style.display = editable ? 'flex' : 'none'
+  gripButton.style.top = `${rect.top + 1 + STACK_STEP * 2}px`
+  gripButton.style.left = column
 }
 
 function setUpBlockPlus() {
