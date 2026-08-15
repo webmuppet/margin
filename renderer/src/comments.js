@@ -12,73 +12,12 @@ const bridge = (payload) => {
   window.webkit?.messageHandlers?.imark?.postMessage(payload)
 }
 
-const OPEN = /^\s*<!--\s*imark\b(.*)$/
-const ATTR = /(\w+)="([^"]*)"/g
+// The marker scanner moved to markers.js so the source editor can share it
+// without dragging this file's DOM listeners into a test runner. Re-exported
+// because main.js has always imported it from here.
+import { ATTR, OPEN, extractComments, unescapeHTML, unwrap } from './markers.js'
 
-/// The colours a note may carry. A closed set on purpose: the value comes out
-/// of somebody's file and ends up in a `data-color` attribute, so anything
-/// unrecognised has to become the default rather than reach the stylesheet.
-/// An absent colour is the default one and writes no attribute at all.
-const COLOURS = new Set(['amber', 'green', 'blue', 'red'])
-const colourOf = (raw) => (COLOURS.has(raw) ? raw : '')
-
-/// Pulls the comment blocks out of the source and blanks the lines they came
-/// from. Blanking rather than deleting is deliberate: every `data-line` in the
-/// rendered HTML counts from the top of the file, and removing lines here would
-/// silently shift everything below by however many notes came before it.
-export function extractComments(body, lineOffset = 0) {
-  const lines = body.split('\n')
-  const comments = []
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const open = OPEN.exec(lines[index])
-    if (!open) continue
-
-    let end = index
-    while (end < lines.length && !lines[end].includes('-->')) end += 1
-    // An unterminated block is somebody's half-typed comment; leave it as text
-    // rather than swallowing the rest of the document.
-    if (end >= lines.length) continue
-
-    const attributes = {}
-    for (const [, key, value] of open[1].matchAll(ATTR)) attributes[key] = unescapeHTML(value)
-
-    comments.push({
-      id: `note-${comments.length}`,
-      quote: attributes.quote ?? '',
-      // `scope="file"` is a note about the document, not about anything in it.
-      // Anything else, including nothing, is a note about a block.
-      scope: attributes.scope === 'file' ? 'file' : 'block',
-      by: attributes.by ?? '',
-      at: attributes.at ?? '',
-      nth: Number(attributes.nth) || 1,
-      colour: colourOf(attributes.color),
-      // Stamped by whoever acted on the note. Still shown — it is the record
-      // of what was asked — but quietly, because it is no longer asking.
-      resolved: attributes.resolved ?? '',
-      text: unwrap(unescapeHTML(lines.slice(index + 1, end).join('\n').trim())),
-      // Both ends, because editing and deleting have to find the block again.
-      line: index + lineOffset,
-      endLine: end + lineOffset,
-    })
-
-    for (let i = index; i <= end; i += 1) lines[i] = ''
-    index = end
-  }
-
-  return { body: lines.join('\n'), comments }
-}
-
-/// A note hard-wrapped in the file is one paragraph, not one line per line.
-/// Single newlines become spaces; a blank line still starts a paragraph.
-const unwrap = (text) =>
-  text
-    .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.replace(/\s*\n\s*/g, ' ').trim())
-    .join('\n\n')
-
-const unescapeHTML = (value) =>
-  value.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+export { extractComments }
 
 /* --------------------------------------------------------------- anchoring */
 
