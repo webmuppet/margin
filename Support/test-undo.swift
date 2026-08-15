@@ -1,8 +1,15 @@
 // Tests for taking a comment back.
 //
-//   swiftc -parse-as-library $(find Sources/Imark -name '*.swift' ! -name main.swift) \
+//   swift build
+//   swiftc -parse-as-library -I .build/debug/Modules \
+//          $(find Sources/Imark -name '*.swift' ! -name main.swift) \
 //          $(find Sources/ImarkRender -name '*.swift') \
 //          Support/test-undo.swift -o /tmp/imark-test-undo && /tmp/imark-test-undo
+//
+// The build and the -I are not optional: Sources/Imark imports ImarkRender by
+// module, so without the built modules on the search path this does not compile
+// at all. release.sh has always run it that way; this comment did not, and said
+// so for long enough that following it looked like the test was broken.
 //
 // Undo is the only thing in Imark that writes a whole file at once. Everything
 // else edits a range of lines and checks the file first. That makes it the one
@@ -67,6 +74,8 @@ struct TestUndo {
             try theFileItGoesBackTo()
             try theFileChangingUnderneath()
             try theWholeWayThroughTheWindow()
+            try aSourceEditUndoesToo()
+            try aMessageIsNotADocument()
         } catch {
             failures += 1
             print("FAIL threw: \(error)")
@@ -241,6 +250,80 @@ struct TestUndo {
 
         check("B is exactly as it was", read(b) == bBefore, String(read(b).prefix(60)))
         check("and A is back to before the comment", read(a) == aBefore, String(read(a).prefix(60)))
+
+        window.close()
+    }
+
+    // MARK: - The same, for an edit that is not a comment
+
+    /// A block edited as markdown takes the same road as a comment: snapshot the
+    /// whole document, write the range, seal. Which means ⌘Z should give the
+    /// paragraph back exactly as it gives a note back.
+    ///
+    /// Worth its own case rather than trusting the shared code, because the two
+    /// halves can be right on their own and not joined up — and if they are not,
+    /// every other suite in the repository still passes. The cost of finding out
+    /// later is somebody's paragraph.
+    static func aSourceEditUndoesToo() throws {
+        print("\n▸ through the window: edit a block as markdown, open B, press undo")
+
+        let a = fixture("# A\n\nThe first document.\n", named: "A2.md")
+        let b = fixture("# B\n\nThe second document, which must survive.\n", named: "B2.md")
+        let aBefore = read(a)
+        let bBefore = read(b)
+
+        let window = DocumentWindowController(url: a)
+        window.window?.setFrameOrigin(NSPoint(x: -6_000, y: 0))
+        window.showWindow(nil)
+        spin(0.8)
+
+        // Line 2 is "The first document." — the same range the renderer would
+        // have sent for that paragraph.
+        window.commitSource(SourceEdit(lines: 2..<3, text: "The first document, corrected."))
+        spin(0.6)
+        check("the edit went into A", read(a).contains("corrected"), read(a))
+        check("and only that line changed", read(a).contains("# A"), read(a))
+
+        window.show(b, pushingHistory: true)
+        spin(0.6)
+
+        window.undoComment(nil)
+        spin(0.6)
+
+        check("B is exactly as it was", read(b) == bBefore, String(read(b).prefix(60)))
+        check("and A is back to before the edit", read(a) == aBefore, String(read(a).prefix(60)))
+
+        window.close()
+    }
+
+    /// The guard that stops a message Imark wrote from being written into the
+    /// file it is standing in for.
+    ///
+    /// An unreadable document puts "# Can't read this file" on screen. Every
+    /// line of it looks as editable as any other, and committing one would
+    /// replace whatever is actually in the file with Imark's apology for not
+    /// being able to read it.
+    static func aMessageIsNotADocument() throws {
+        print("\n▸ a document Imark could not read is not one it may write")
+
+        // Written as bytes rather than text, because the point is that it is not
+        // text: 0x80 is a continuation byte with nothing to continue.
+        let path = fixture("placeholder\n", named: "binary.md")
+        try Data([0x48, 0x69, 0x80, 0x0A]).write(to: path)
+        let before = try Data(contentsOf: path)
+
+        let window = DocumentWindowController(url: path)
+        window.window?.setFrameOrigin(NSPoint(x: -6_000, y: 0))
+        window.showWindow(nil)
+        spin(0.8)
+
+        window.commitSource(SourceEdit(lines: 0..<1, text: "# Can't read this file"))
+        spin(0.6)
+
+        check("the file is untouched", (try? Data(contentsOf: path)) == before)
+        check("and Imark's own message did not land in it",
+              !(String(data: (try? Data(contentsOf: path)) ?? Data(), encoding: .utf8) ?? "")
+                  .contains("Can't read"))
 
         window.close()
     }

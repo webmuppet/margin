@@ -403,7 +403,12 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
     /// that changes something other than a note, so it goes through exactly the
     /// same door — `Comments.replace` is `Comments.insert`'s guarantees with a
     /// different range.
-    private func commitSource(_ edit: SourceEdit) {
+    ///
+    /// Reachable from Support/test-undo.swift, for the same reason
+    /// `composingFileNote` is: an edit that reaches the file but not the undo
+    /// stack is a correct model wired up wrongly, and that is exactly what no
+    /// other suite in the repository can see.
+    func commitSource(_ edit: SourceEdit) {
         // A message Imark wrote is on screen instead of the document. There is
         // nothing here that belongs in the file.
         guard showingRealDocument else { return NSSound.beep() }
