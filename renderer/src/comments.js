@@ -374,7 +374,7 @@ function closeCards(except) {
 /// thing that tells it apart from one somebody opened on purpose — and the two
 /// have to close differently. A card you clicked stays until you dismiss it. A
 /// card that appeared because you read past its underline goes when you move on.
-function openCard(id, { peek } = { peek: false }) {
+function openCard(id, { peek, over } = { peek: false }) {
   const card = document.querySelector(`.note-card[data-note="${id}"]`)
   if (!card) return null
 
@@ -384,10 +384,84 @@ function openCard(id, { peek } = { peek: false }) {
 
   const dot = document.querySelector(`.note-dot[data-note="${id}"]`)
   dot?.classList.add('open')
+
+  // Read past the words and the note comes to the words. Anywhere else and the
+  // eye has to leave what it was reading, cross the margin, find the card, and
+  // come back — which is fine when you asked for it by clicking, and too much
+  // to charge for glancing.
+  //
+  // Only when the asking came from the quote. A note opened from its dot stays
+  // in the margin, because the dot is already over there and a card that jumped
+  // away from the thing under the pointer is the same problem pointed the other
+  // way.
+  if (over?.classList.contains('note-anchor')) return floatOver(card, over)
+
+  card.classList.remove('floating', 'flipped')
+  card.style.left = ''
+  card.style.right = ''
   // The card lines up with its own dot, so stacked notes open at the height of
   // the one you pressed rather than all at the top of the paragraph.
   card.style.top = dot?.style.top || '0px'
   placeCard(card)
+  return card
+}
+
+/// Puts the card over the words it is about.
+///
+/// Measured against the holder, which is already the positioning context every
+/// card sits in, so it scrolls with the paragraph rather than being pinned to
+/// the window and having to chase it.
+function floatOver(card, anchor) {
+  const holder = card.parentElement
+  if (!holder) return card
+
+  // A narrow column has no margin to overlap and no room to float in either.
+  // The existing fallback puts the card under the block, and that is still the
+  // right answer here.
+  const host = holder.getBoundingClientRect()
+  if (host.width < 320) {
+    card.classList.remove('floating', 'flipped')
+    card.style.left = ''
+    card.style.right = ''
+    placeCard(card)
+    return card
+  }
+
+  card.classList.add('floating')
+  card.style.right = 'auto'
+
+  // The first line box, not the bounding box. A quote that wraps has a bounding
+  // box as wide as the column and a centre that belongs to no line of it, which
+  // put the card over the middle of the paragraph instead of over the words.
+  const rect = anchor.getClientRects()[0] ?? anchor.getBoundingClientRect()
+
+  // Clamped against the window, not the holder. The holder is the text column,
+  // and a card centred on a quote near its left edge is half outside it — held
+  // to the column it gets shoved sideways until it is no longer over anything
+  // it is about. Overhanging the margin is what the other card already does.
+  const edge = 24
+  const wanted = rect.left + rect.width / 2 - card.offsetWidth / 2
+  const clamped = Math.max(edge, Math.min(wanted, window.innerWidth - card.offsetWidth - edge))
+  card.style.left = `${Math.round(clamped - host.left)}px`
+
+  // And the tail points at the words rather than at the middle of the card,
+  // which are the same place only when nothing had to be clamped.
+  const tail = rect.left + rect.width / 2 - clamped
+  card.style.setProperty(
+    '--tail',
+    `${Math.round(Math.max(12, Math.min(tail, card.offsetWidth - 12)))}px`
+  )
+
+  // Above by default, below when there is no room above — measured against the
+  // window, because what matters is whether you can see it, not whether it fits
+  // inside the paragraph.
+  const gap = 10
+  const above = rect.top - card.offsetHeight - gap
+  const flipped = above < gap
+  card.classList.toggle('flipped', flipped)
+  card.style.top = `${Math.round(
+    (flipped ? rect.bottom + gap : rect.top - card.offsetHeight - gap) - host.top
+  )}px`
   return card
 }
 
@@ -443,7 +517,12 @@ export function installCommentHandlers() {
     const opening = card.hidden || card.dataset.peek === 'true'
     closeCards(opening ? card : null)
     if (opening) {
-      openCard(id, { peek: false })
+      // Asked from the words, shown at the words — however it was asked. The
+      // alternative is a card that jumps to the margin the moment you click the
+      // one you were already reading, which is movement in answer to a press
+      // that meant "keep this". The dot still opens in the margin, because the
+      // dot is over there and that is where you were looking.
+      openCard(id, { peek: false, over: trigger })
     } else {
       card.hidden = true
       delete card.dataset.peek
@@ -477,7 +556,7 @@ export function installCommentHandlers() {
     clearTimeout(peekIn)
     peekIn = setTimeout(() => {
       closePeeks(null)
-      openCard(id, { peek: true })
+      openCard(id, { peek: true, over: trigger })
     }, PEEK_DELAY)
   })
 

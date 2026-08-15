@@ -1399,3 +1399,50 @@ img[data-blocked] {
    already made, on every block, for as long as the setting is off. */
 :root[data-editing='false'] .source-toggle,
 :root[data-editing='false'] .note-source { display: none; }
+
+/* A note peeked at from its own words opens over them. Positioned in JS against
+   the holder — the same positioning context every card already sits in, so it
+   scrolls with the paragraph instead of being pinned to the window and having
+   to chase it. */
+.note-card.floating {
+  right: auto;
+  /* Wider than the margin card can afford to be, because nothing here has to
+     fit beside the text — but still short of the column, so the words it is
+     about stay visible either side of it. */
+  width: min(320px, 80%);
+}
+
+/* Which words it belongs to. Two notes on neighbouring lines are a card and an
+   ambiguity without it; the tail is what makes it a remark about *this* phrase.
+   Drawn as a rotated corner of the card so it takes the border and the surface
+   with it and stays right in every theme. */
+.note-card.floating::after {
+  content: '';
+  position: absolute;
+  /* Set in JS to the words' own centre. Half the card's width is the same
+     place only when nothing had to be clamped, and a tail pointing at the
+     middle of a card that was pushed sideways points at nothing. */
+  left: calc(var(--tail, 50%) - 5px);
+  width: 10px;
+  height: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transform: rotate(45deg);
+}
+
+/* Pointing down at the words, with the two borders the card itself is drawing
+   over hidden. */
+.note-card.floating::after {
+  bottom: -6px;
+  border-top: 0;
+  border-left: 0;
+}
+
+/* Flipped: no room above, so it sits under the words and points up at them. */
+.note-card.floating.flipped::after {
+  bottom: auto;
+  top: -6px;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-right: 0;
+}
