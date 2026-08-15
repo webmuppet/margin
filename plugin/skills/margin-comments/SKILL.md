@@ -1,5 +1,5 @@
 ---
-name: imark-comments
+name: margin-comments
 description: Read and write the `<!-- imark … -->` comment blocks that Margin stores inside markdown files. Use when a markdown file contains blocks starting with `<!-- imark`, when the user mentions Margin notes or comments, asks you to read their annotations on a document, or asks for feedback they left in a file to be acted on.
 ---
 
