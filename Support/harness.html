@@ -102,6 +102,17 @@
             where it was. Then check the key does <em>nothing</em> while you are typing
             in an open editor, and nothing while text is selected — a selection means
             the popover is offering to comment on those words.</li>
+        <li>Drag a block by the grip under the <code>+</code>. A line shows where it
+            would land; dropping puts it there and nothing is glued to its new
+            neighbour. Dragging <em>a heading</em> takes its whole section, and the
+            numbers on <code>## 1.</code> style headings are rewritten afterwards.
+            Then check <kbd>⌥↑</kbd> / <kbd>⌥↓</kbd> does the same without a pointer.</li>
+        <li>Drag the block that has a note on it. The note has to arrive with it —
+            left behind, it does not orphan, it silently becomes a note about
+            whatever is now above it.</li>
+        <li>Try to start a drag from the middle of a paragraph. It must not start:
+            selecting words is how a comment finds what it is about, and only the
+            grip is draggable.</li>
         <li>Turn editing off (<code>window.imark.setEditing(false)</code> here, the
             Settings switch in the app). Both <code>&lt;/&gt;</code> controls go, any
             open editor closes, and <kbd>⌫</kbd> stops deleting. Turn it back on and
@@ -147,9 +158,13 @@
         'const x = 1',
         '```',
         '',
-        '## A sub heading',
+        '## 1. First section',
         '',
-        'The last paragraph.',
+        'Belongs to the first.',
+        '',
+        '## 2. Second section',
+        '',
+        'Belongs to the second.',
       ].join('\n')
 
       let doc = SOURCE
@@ -185,6 +200,10 @@
                 if (to < lines.length && !lines[to].trim()) to += 1
                 else if (from > 0 && !lines[from - 1].trim()) from -= 1
                 lines.splice(from, to - from)
+              } else if (message.type === 'moveBlock') {
+                doc = message.document
+                setTimeout(() => render(), 10)
+                return
               } else {
                 return
               }

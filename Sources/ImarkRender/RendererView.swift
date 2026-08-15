@@ -19,6 +19,7 @@ public enum RendererMessage {
     case noteCommand(NoteCommand)
     case editSource(SourceEdit)
     case deleteBlock(lines: Range<Int>)
+    case moveBlock(document: String)
 }
 
 /// A block edited as markdown, on its way back to the file.
@@ -431,6 +432,15 @@ public final class RendererView: NSView {
                       let to = body["to"] as? Int, from < to
                 else { break }
                 owner.onMessage?(.deleteBlock(lines: from..<to))
+
+            // A move arrives as the whole document rather than a range, because
+            // it is not one: lines leave one place and arrive at another, and
+            // the numbered headings between them are rewritten on the way. The
+            // renderer owns the parser, so it is the side that can do that.
+            case "moveBlock":
+                if let text = body["document"] as? String {
+                    owner.onMessage?(.moveBlock(document: text))
+                }
 
             case "wikilinks":
                 owner.onMessage?(.wikilinks(body["targets"] as? [String] ?? []))

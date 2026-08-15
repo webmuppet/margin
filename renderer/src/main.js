@@ -12,8 +12,9 @@ import mermaid from 'mermaid'
 
 import wikilink from './wikilink.js'
 import { ICON_SOURCE, elementsFor, openSourceEditor, withEmptyAncestors } from './editor.js'
+import { canMove, documentAfterMove, neighbourUnit, unitFor } from './move.js'
 import { segmentsOf, spliceSegment, textOf } from './source.js'
-import { validateCommit } from './validate.js'
+import { validateCommit, validateMove } from './validate.js'
 import {
   attachComments,
   attached as attachedNotes,
@@ -880,32 +881,34 @@ window.addEventListener(
 /// from the parse: what is on screen is the only thing the person can point at,
 /// and a list held from the parse before would still look valid after an edit
 /// while naming the wrong lines.
-function blockRanges() {
-  const ranges = []
-
-  // Descends through anything that is not itself a block. A commented block is
-  // wrapped in a note holder, so it stops being a child of the document and
-  // becomes a grandchild — and reading only the top level meant every block
-  // somebody had commented on was the one kind you could not edit, which is
-  // exactly backwards. selectionInfo has walked past the same wrapper since
-  // comments were built; this is the same walk in the other direction.
+/// Every block of the document, in order.
+///
+/// Descends through anything that is not itself a block. A commented block is
+/// wrapped in a note holder, so it stops being a child of the document and
+/// becomes a grandchild — and reading only the top level means every block
+/// somebody has commented on is invisible, which is exactly backwards. That has
+/// now been the same bug twice, in two features, so there is one walk.
+/// selectionInfo has stepped past the same wrapper since comments were built.
+function documentBlocks() {
+  const found = []
   const walk = (parent) => {
     for (const child of parent.children) {
       // A note's own card is not document text. It has no lines in the file,
       // and what it holds is a comment about the block, not the block.
       if (child.classList.contains('note-card')) continue
-      const raw = child.getAttribute('data-line')
-      if (!raw) {
-        walk(child)
-        continue
-      }
-      const [from, to] = raw.split(',').map(Number)
-      if (Number.isFinite(from) && Number.isFinite(to)) ranges.push([from, to])
+      if (lineRange(child)) found.push(child)
+      else walk(child)
     }
   }
-
   walk(content())
-  return ranges
+  return found
+}
+
+function blockRanges() {
+  return documentBlocks().map((block) => {
+    const { start, end } = lineRange(block)
+    return [start, end]
+  })
 }
 
 /// Every piece of the document that can be opened as markdown.
@@ -986,6 +989,88 @@ document.addEventListener('imark:editMarker', (event) => {
   })
 })
 
+/* ---------------------------------------------------------- moving a block */
+
+/// The lines a grab on the margin would move: the block, its section if it is a
+/// heading, and the notes written about anything inside.
+function unitUnderPointer(block) {
+  const lines = lineRange(block)
+  return lines ? unitFor(lastSource, lines.start, lines.end) : null
+}
+
+/// Puts a moved document on its way to Swift, once it is sure nothing was lost.
+///
+/// Checked against the set of notes rather than their positions: a move changes
+/// where every note below it sits, so asking whether they stayed put would
+/// refuse every move there is. What must hold is that the same notes are still
+/// in the document.
+function commitMove(unit, before) {
+  const after = documentAfterMove(lastSource, unit, before)
+  if (!after) return { ok: true, unchanged: true }
+
+  const verdict = validateMove(lastSource, after)
+  if (!verdict.ok) return verdict
+
+  bridge({ type: 'moveBlock', document: after })
+  return { ok: true }
+}
+
+/// Where a drop on this block would land, in lines: above it, or past
+/// everything it carries.
+const landingFor = (block, below) => {
+  const unit = unitUnderPointer(block)
+  return unit ? (below ? unit.to : unit.from) : null
+}
+
+/// Whether a landing line is a place this drag could actually go. A block
+/// cannot be dropped inside itself, and a heading cannot be dropped inside its
+/// own section — both ask for the lines to end up before themselves.
+const canLand = (landing) => !!dragging && canMove(dragging.unit, landing)
+
+let dragging = null
+
+const clearDropMarks = () => {
+  for (const el of content().querySelectorAll('.drop-above, .drop-below')) {
+    el.classList.remove('drop-above', 'drop-below')
+  }
+}
+
+/// Moves the block under the margin by one place, for people not using a mouse.
+///
+/// The same move the grip makes, reached the way the rest of the app is reached.
+/// A drag is a gesture with no keyboard equivalent at all unless one is built,
+/// and "reorder your document" is not a reasonable thing to need a pointer for.
+function nudge(block, direction) {
+  const unit = unitUnderPointer(block)
+  if (!unit) return
+
+  const units = documentBlocks().map(unitUnderPointer).filter(Boolean)
+
+  // Nesting is the trap here, and it is worth reading neighbourUnit for why.
+  const target = neighbourUnit(units, unit, direction)
+  if (!target) return NSSoundBeep()
+
+  const verdict = commitMove(unit, direction < 0 ? target.from : target.to)
+  if (!verdict.ok) reportRefusal(verdict.reason)
+}
+
+/// There is no beep in a web view, and a silent nothing is indistinguishable
+/// from a broken key. The margin flashes the block instead.
+function NSSoundBeep() {
+  const block = document.querySelector('.block-target')
+  if (!block) return
+  block.classList.add('block-refused')
+  setTimeout(() => block.classList.remove('block-refused'), 300)
+}
+
+/// A refusal with nowhere to put itself. Moves have no box to write in the way
+/// an editor does, so the message goes where the last one went — the status the
+/// app already shows — rather than into an alert nobody asked for.
+function reportRefusal(reason) {
+  NSSoundBeep()
+  bridge({ type: 'moveRefused', reason })
+}
+
 /// Deletes the block the margin controls are standing beside.
 ///
 /// The block, not a selection: what the key acts on is the thing lit up on
@@ -996,6 +1081,28 @@ document.addEventListener('imark:editMarker', (event) => {
 /// the source editor is deleting a character, delete inside the composer is
 /// deleting a character, and a document-wide handler that did not check would
 /// eat a paragraph while somebody was typing a note about it.
+/// Alt and an arrow moves the block under the margin, one place at a time.
+///
+/// A drag has no keyboard equivalent unless one is built, and reordering a
+/// document is not a reasonable thing to need a pointer for. Alt rather than a
+/// bare arrow because the arrows already scroll the page, which is the more
+/// common thing by a long way.
+document.addEventListener('keydown', (event) => {
+  if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return
+  if (event.metaKey || event.ctrlKey) return
+  if (!editingAllowed() || editorIsOpen()) return
+
+  const target = event.target
+  if (target instanceof HTMLElement
+      && (target.isContentEditable || target.closest('input, textarea'))) return
+
+  const block = document.querySelector('.block-target')
+  if (!block) return
+
+  event.preventDefault()
+  nudge(block, event.key === 'ArrowUp' ? -1 : 1)
+})
+
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Backspace' && event.key !== 'Delete') return
   if (event.metaKey || event.ctrlKey || event.altKey) return
@@ -1193,6 +1300,15 @@ const topLevelBlock = (node) => {
 /// and dropped. Nothing about a table is special here now; it is just another
 /// rectangle to sit beside.
 let sourceButton = null
+let gripButton = null
+
+/// Six dots, the shape every draggable handle on every platform has been for
+/// twenty years. Recognised without a label, which is the only reason a control
+/// this small can carry a gesture at all.
+const ICON_GRIP = '<svg viewBox="0 0 16 16" aria-hidden="true">'
+  + [4, 8, 12].map((y) => `<circle cx="6" cy="${y}" r="1.15" fill="currentColor"/>`
+    + `<circle cx="10" cy="${y}" r="1.15" fill="currentColor"/>`).join('')
+  + '</svg>'
 /// While an editor is open the margin stops offering another one. Two open at
 /// once is two unsaved edits to the same file, and the second to be committed
 /// would be spliced against lines the first had already moved.
@@ -1211,12 +1327,15 @@ const editorIsOpen = () => !!content().querySelector('.source-box')
 /// so a narrow window pushes them into the gutter rather than off the page.
 const PLUS_OFFSET = 34
 const SOURCE_OFFSET = 62
+/// And how far under the `+` the grip sits.
+const GRIP_DROP = 26
 
 function hidePlus() {
   plusTarget?.classList.remove('block-target', 'block-armed')
   plusTarget = null
   if (plusButton) plusButton.style.display = 'none'
   if (sourceButton) sourceButton.style.display = 'none'
+  if (gripButton) gripButton.style.display = 'none'
 }
 
 function showPlus(block) {
@@ -1244,6 +1363,14 @@ function showPlus(block) {
   sourceButton.style.display = piece && editingAllowed() && !editorIsOpen() ? 'flex' : 'none'
   sourceButton.style.top = `${rect.top + 1}px`
   sourceButton.style.left = `${Math.max(4, rect.left - SOURCE_OFFSET)}px`
+
+  if (!gripButton) return
+  // Under the `+` rather than beside it. The row across the margin is already
+  // two wide, and a third would push the outermost one into the rail on a
+  // narrow window — where the outline lives and answers to the pointer itself.
+  gripButton.style.display = editingAllowed() && !editorIsOpen() ? 'flex' : 'none'
+  gripButton.style.top = `${rect.top + 1 + GRIP_DROP}px`
+  gripButton.style.left = `${Math.max(4, rect.left - PLUS_OFFSET)}px`
 }
 
 function setUpBlockPlus() {
@@ -1274,6 +1401,74 @@ function setUpBlockPlus() {
       scheduleHide()
     })
   }
+
+  gripButton = document.createElement('button')
+  gripButton.type = 'button'
+  gripButton.className = 'block-grip'
+  gripButton.innerHTML = ICON_GRIP
+  gripButton.title = 'Drag to move this block. Alt + up or down to move it by keyboard.'
+  gripButton.setAttribute('aria-label', 'Move this block')
+  // Only the grip. A draggable block steals every drag that starts inside it,
+  // and a drag that starts inside a paragraph is somebody selecting the words
+  // they want to comment on — which is the whole product.
+  gripButton.draggable = true
+  gripButton.style.display = 'none'
+  document.body.appendChild(gripButton)
+
+  for (const event of ['mouseenter', 'mouseleave']) {
+    gripButton.addEventListener(event, () => {
+      if (event === 'mouseenter') cancelHide()
+      else scheduleHide()
+      plusTarget?.classList.toggle('block-armed', event === 'mouseenter')
+    })
+  }
+
+  gripButton.addEventListener('dragstart', (event) => {
+    const block = plusTarget
+    const unit = block && unitUnderPointer(block)
+    if (!unit) return event.preventDefault()
+    dragging = { unit, block }
+    event.dataTransfer.effectAllowed = 'move'
+    // Firefox and Safari both refuse to start a drag with nothing on it.
+    event.dataTransfer.setData('text/plain', String(unit.from))
+    event.dataTransfer.setDragImage(block, 12, 12)
+    block.classList.add('is-moving')
+  })
+
+  gripButton.addEventListener('dragend', () => {
+    dragging?.block.classList.remove('is-moving')
+    dragging = null
+    clearDropMarks()
+  })
+
+  content().addEventListener('dragover', (event) => {
+    if (!dragging) return
+    const block = event.target instanceof Element ? topLevelBlock(event.target) : null
+    if (!block) return
+    const box = block.getBoundingClientRect()
+    const below = event.clientY > box.top + box.height / 2
+    const landing = landingFor(block, below)
+    if (landing === null || !canLand(landing)) return
+
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    clearDropMarks()
+    block.classList.add(below ? 'drop-below' : 'drop-above')
+  })
+
+  content().addEventListener('drop', (event) => {
+    if (!dragging) return
+    const block = event.target instanceof Element ? topLevelBlock(event.target) : null
+    if (!block) return
+    const box = block.getBoundingClientRect()
+    const landing = landingFor(block, event.clientY > box.top + box.height / 2)
+    clearDropMarks()
+    if (landing === null || !canLand(landing)) return
+
+    event.preventDefault()
+    const verdict = commitMove(dragging.unit, landing)
+    if (!verdict.ok) reportRefusal(verdict.reason)
+  })
 
   sourceButton.addEventListener('click', () => {
     const block = plusTarget
@@ -1323,7 +1518,8 @@ function setUpBlockPlus() {
     // anything. Existing notes still show — that is reading — but offering a
     // way to add one there is offering something that cannot happen.
     if (document.documentElement.dataset.preview === 'true') return hidePlus()
-    if (event.target === plusButton || sourceButton?.contains(event.target)) return cancelHide()
+    if (event.target === plusButton || sourceButton?.contains(event.target)
+        || gripButton?.contains(event.target)) return cancelHide()
     // Kept because the block under the pointer is not always one piece: a list
     // with a note written into it is two, and only the pointer can say which.
     lastPointerY = event.clientY

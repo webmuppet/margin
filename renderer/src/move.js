@@ -137,6 +137,34 @@ export function renumberHeadings(source) {
     .join('\n')
 }
 
+/// The unit next to this one in the document, in the given direction.
+///
+/// Not the next one in a list, and the difference is not academic: units nest.
+/// A heading's unit contains the units of everything under it, so stepping one
+/// place along a list of blocks steps *into* the section beside you rather than
+/// over it — which moved a section up one place by slotting it between the
+/// previous heading and that heading's own first paragraph.
+///
+/// The neighbour is the nearest unit clear of this one, and where several end
+/// in the same place, the outermost: the section, not its last line.
+export function neighbourUnit(units, unit, direction) {
+  let best = null
+  for (const other of units) {
+    if (direction < 0) {
+      if (other.to > unit.from) continue
+      if (!best || other.to > best.to || (other.to === best.to && other.from < best.from)) {
+        best = other
+      }
+    } else {
+      if (other.from < unit.to) continue
+      if (!best || other.from < best.from || (other.from === best.from && other.to > best.to)) {
+        best = other
+      }
+    }
+  }
+  return best
+}
+
 /// A move, from the grabbed block's lines to a landing line, as a whole
 /// document. Returns null when there is nothing to do.
 export function documentAfterMove(source, unit, before) {

@@ -13,7 +13,7 @@
 // silently turns it into a note about whatever is now above it.
 
 import {
-  canMove, documentAfterMove, moveLines, renumberHeadings, unitFor,
+  canMove, documentAfterMove, moveLines, neighbourUnit, renumberHeadings, unitFor,
 } from '../renderer/src/move.js'
 
 let failures = 0
@@ -223,6 +223,50 @@ console.log('\n▸ the two together')
   const source = doc('A.', '', 'B.')
   check('a move that changes nothing reports nothing',
     documentAfterMove(source, unitFor(source, 0, 1), 0) === null)
+}
+
+// --------------------------------------------------------------- neighbours
+
+// The bug this was written for: a section moved up one place landed between the
+// previous heading and that heading's own first paragraph, because stepping one
+// place along the list of blocks steps *into* the neighbouring section rather
+// than over it. Units nest; lists do not know that.
+console.log('\n▸ the unit beside this one is not the next one in the list')
+
+{
+  const source = doc(
+    '## 1. First',        // 0
+    '',                   // 1
+    'Belongs to first.',  // 2
+    '',                   // 3
+    '## 2. Second',       // 4
+    '',                   // 5
+    'Belongs to second.', // 6
+  )
+  // What the DOM hands over: every block, in order, each with its own unit.
+  const units = [[0, 1], [2, 3], [4, 5], [6, 7]].map(([f, t]) => unitFor(source, f, t))
+  const second = units[2]
+
+  const up = neighbourUnit(units, second, -1)
+  check('going up from a section reaches the whole section above it',
+    up.from === 0 && up.to === 3, JSON.stringify(up))
+  check('and not that section\'s last paragraph',
+    up.from !== 2, JSON.stringify(up))
+
+  const first = units[0]
+  const down = neighbourUnit(units, first, 1)
+  check('going down from a section clears its own body first',
+    down.from === 4, JSON.stringify(down))
+
+  check('there is nothing past the last one', neighbourUnit(units, second, 1) === null)
+  check('nor before the first', neighbourUnit(units, first, -1) === null)
+
+  // And the move that follows from it.
+  const after = documentAfterMove(source, second, up.from)
+  const lines = after.split('\n').filter((l) => l.trim())
+  check('so the two sections swap whole, and renumber',
+    lines.join('|') === '## 1. Second|Belongs to second.|## 2. First|Belongs to first.',
+    lines.join('|'))
 }
 
 console.log(failures === 0 ? '\nall good' : `\n${failures} failing`)

@@ -39,6 +39,52 @@ const opens = (note) => {
 
 const refuse = (reason, note) => ({ ok: false, reason, line: note?.line ?? null })
 
+/// Whether a move may be written.
+///
+/// A different question from an edit, and it has to be asked differently.
+/// `validateCommit` checks that the notes around a change did not move, which is
+/// the whole point of it — and is exactly what a move does. What must hold here
+/// is that the same notes are still there: same quotes, same authors, same text,
+/// same count. Where they are is what changed.
+///
+/// So the check is on the set, not the positions. A move that loses a note, or
+/// merges two, or leaves an opening dangling, changes that set and is refused.
+export function validateMove(before, after) {
+  const dangling = danglingOpenings(after)
+  if (dangling.length && !danglingOpenings(before).length) {
+    return {
+      ok: false,
+      reason: `That move would leave the note at line ${dangling[0] + 1} unclosed.`,
+      line: dangling[0],
+    }
+  }
+
+  const was = extractComments(before, 0).comments
+  const now = extractComments(after, 0).comments
+
+  if (was.length !== now.length) {
+    return {
+      ok: false,
+      reason: `That move would leave ${now.length} of ${was.length} notes in the document.`,
+      line: null,
+    }
+  }
+
+  // Matched by content rather than by index, because the order is allowed to
+  // change and usually has. A note that came through unaltered is somewhere in
+  // the new set; one that did not is what this is looking for.
+  const remaining = [...now]
+  for (const note of was) {
+    const at = remaining.findIndex((candidate) => same(note, candidate))
+    if (at < 0) {
+      return refuse(`That move would change ${describe(note)}.`, note)
+    }
+    remaining.splice(at, 1)
+  }
+
+  return { ok: true }
+}
+
 /// Whether an edit may be written.
 ///
 /// `before` and `after` are whole documents, not pieces: a splice can move

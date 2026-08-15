@@ -318,6 +318,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         case .deleteBlock(let lines):
             deleteBlock(lines)
 
+        case .moveBlock(let document):
+            moveBlock(to: document)
+
         case .comments(let found, let reviewing):
             notes = found
             noteCount = found.count
@@ -447,6 +450,29 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         } catch {
             undoStack.discardLast()
             report(error, doing: "delete that block")
+        }
+    }
+
+    /// Writes the document back after a block has been dragged somewhere else.
+    ///
+    /// The whole file, not a range, because a move is not one: lines leave one
+    /// place and arrive at another, and any numbered headings between them are
+    /// rewritten on the way. Working out which lines those are needs the parser,
+    /// which lives on the other side — so this side does what it always does,
+    /// which is refuse to write over a file that moved underneath it, and put
+    /// the whole document on the undo stack first.
+    private func moveBlock(to document: String) {
+        guard showingRealDocument else { return NSSound.beep() }
+
+        do {
+            snapshot("Move Block")
+            // The same call undo uses, and for the same reason: this is the
+            // other write in the app that replaces a file wholesale.
+            try Comments.restore(document, to: url, expecting: stamp)
+            finishWrite()
+        } catch {
+            undoStack.discardLast()
+            report(error, doing: "move that block")
         }
     }
 
