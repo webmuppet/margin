@@ -11,6 +11,7 @@ import renderMathInElement from 'katex/contrib/auto-render'
 import mermaid from 'mermaid'
 
 import wikilink from './wikilink.js'
+import { installSourceEditors } from './editor.js'
 import { segmentsOf, spliceSegment, textOf } from './source.js'
 import { validateCommit } from './validate.js'
 import {
@@ -809,6 +810,14 @@ async function render({ markdown, path, theme, preview, rail }) {
   matchIndex = -1
 
   addCopyButtons(root)
+  // After the notes are attached, never before: a commented block is wrapped in
+  // a holder, so the elements a piece of the file stands for are not the ones
+  // that were there a moment ago.
+  installSourceEditors(root, {
+    segments: editableSegments(),
+    sourceOf: (piece) => textOf(lastSource, piece),
+    commit: commitSource,
+  })
   renderMath(root)
   activeHeadings = buildToc(root)
   buildRail(root)
@@ -876,12 +885,29 @@ window.addEventListener(
 /// while naming the wrong lines.
 function blockRanges() {
   const ranges = []
-  for (const child of content().children) {
-    const raw = child.getAttribute('data-line')
-    if (!raw) continue
-    const [from, to] = raw.split(',').map(Number)
-    if (Number.isFinite(from) && Number.isFinite(to)) ranges.push([from, to])
+
+  // Descends through anything that is not itself a block. A commented block is
+  // wrapped in a note holder, so it stops being a child of the document and
+  // becomes a grandchild — and reading only the top level meant every block
+  // somebody had commented on was the one kind you could not edit, which is
+  // exactly backwards. selectionInfo has walked past the same wrapper since
+  // comments were built; this is the same walk in the other direction.
+  const walk = (parent) => {
+    for (const child of parent.children) {
+      // A note's own card is not document text. It has no lines in the file,
+      // and what it holds is a comment about the block, not the block.
+      if (child.classList.contains('note-card')) continue
+      const raw = child.getAttribute('data-line')
+      if (!raw) {
+        walk(child)
+        continue
+      }
+      const [from, to] = raw.split(',').map(Number)
+      if (Number.isFinite(from) && Number.isFinite(to)) ranges.push([from, to])
+    }
   }
+
+  walk(content())
   return ranges
 }
 

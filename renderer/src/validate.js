@@ -21,7 +21,7 @@
 // a first-class state since before this feature existed, and losing an anchor
 // is a thing to be shown, not a thing to be prevented.
 
-import { danglingOpenings, extractComments } from './markers.js'
+import { OPEN as OPENING, danglingOpenings, extractComments } from './markers.js'
 
 const FIELDS = ['quote', 'by', 'at', 'nth', 'colour', 'scope', 'resolved', 'text']
 
@@ -109,6 +109,28 @@ export function validateCommit(before, after, segment, replacement) {
           note
         )
       }
+    }
+  }
+
+  // A note opened inside the replacement and not closed inside it. Left to the
+  // checks below, this reads as "a note somewhere else was destroyed", which is
+  // true and useless: what happened is that the opening ran on until it found
+  // some other note's `-->` and swallowed everything in between. The person
+  // typed the cause, so the cause is what they should be told about.
+  const written = replacement.split('\n')
+  for (let index = 0; index < written.length; index += 1) {
+    if (!OPENING.test(written[index])) continue
+    let end = index
+    while (end < written.length && !written[end].includes('-->')) end += 1
+    if (end < written.length) {
+      index = end
+      continue
+    }
+    return {
+      ok: false,
+      reason: 'This opens a note and never closes it, so it would run on and '
+        + 'swallow the next one. End it with a line reading `-->`.',
+      line: segment.from + index,
     }
   }
 

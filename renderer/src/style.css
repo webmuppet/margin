@@ -1258,3 +1258,99 @@ img[data-blocked] {
   color: var(--secondary);
   opacity: 0.75;
 }
+
+/* ------------------------------------------------------- source editing */
+
+/* The way into a block's markdown. Beside the block, never on it: a control
+   that covered the text would take the drag that starts a selection, and
+   selecting is how a comment finds the words it is about. */
+.has-source-toggle { position: relative; }
+
+/* Outside the `+`, not on top of it. The comment button is fixed to the
+   viewport at the hovered block's left edge minus 34px, so anything nearer than
+   that lands underneath it — which is how this first went in, and the margin
+   then had two controls stacked in one place with only the top one reachable.
+   The margin reads left to right: source, comment, text. */
+.source-toggle {
+  position: absolute;
+  top: 0;
+  left: calc(var(--step) * -16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  cursor: pointer;
+}
+
+.source-toggle svg { width: 13px; height: 13px; display: block; }
+
+/* Shown on hover, and on focus so it can be reached without a pointer. Without
+   a focus rule the control exists for the keyboard but never appears, which is
+   the same as not existing.
+   Both :focus and :focus-visible, deliberately. :focus-visible alone is the
+   tidier rule — it is what stops a mouse click leaving a ring behind — but it
+   is also a judgement the engine makes about how the element was focused, and
+   the whole control disappearing is too much to hang on it. :focus costs
+   nothing here: the only ways to focus this button are the keyboard, and a
+   click, and after a click it is already showing. */
+.has-source-toggle:hover > .source-toggle,
+.source-toggle:focus,
+.source-toggle:focus-visible,
+.source-toggle.is-on {
+  opacity: 1;
+}
+
+.source-toggle:hover { color: var(--text); }
+.source-toggle.is-on { color: var(--accent); border-color: var(--accent); }
+
+/* Hidden with display, not the `hidden` attribute. `hidden` is the lowest
+   specificity rule in the language and loses to any author rule that sets
+   `display` — which this stylesheet does for nearly every block a document
+   contains. It fails by leaving the block visible, or by leaving it invisible
+   and still taking the clicks meant for the editor on top of it. */
+.is-source-hidden { display: none !important; }
+
+.source-box {
+  position: relative;
+  margin: calc(var(--step) * 3) 0;
+}
+
+.source-text {
+  display: block;
+  width: 100%;
+  padding: calc(var(--step) * 3);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--code-bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  resize: vertical;
+  tab-size: 2;
+}
+
+.source-text:focus { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* A refusal keeps the editor open underneath it. What somebody just typed is
+   the only copy of it, and closing the box to show a message about why it
+   could not be saved would throw the text away to make room for the excuse. */
+.source-error {
+  margin: calc(var(--step) * 2) 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--note-red);
+}
+
+.source-error code { background: none; padding: 0; }
+
+/* The preview panel renders; it does not edit. */
+:root[data-preview='true'] .source-toggle { display: none; }

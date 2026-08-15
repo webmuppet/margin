@@ -159,6 +159,11 @@ console.log('\n▸ and what it has to refuse')
   check('an unterminated note opened in prose', !verdict.ok)
   check('and it points at the line that opened it',
     verdict.line === 2, String(verdict.line))
+  // The opening finds the *next* note's close and eats everything between, so
+  // the neighbour checks would report a note elsewhere as destroyed. True, and
+  // useless: the person typed the cause, so the cause is what they are told.
+  check('and it blames what was typed, not what it swallowed',
+    /opens a note and never closes it/.test(verdict.reason || ''), verdict.reason)
 }
 
 console.log('\n▸ an edit may not reach past the piece it was given')
