@@ -48,7 +48,7 @@ final class WelcomeWindowController: NSWindowController {
             icon.heightAnchor.constraint(equalToConstant: 84),
         ])
 
-        let title = NSTextField(labelWithString: "Imark")
+        let title = NSTextField(labelWithString: "Margin")
         title.font = .systemFont(ofSize: 26, weight: .semibold)
 
         let subtitle = NSTextField(labelWithString: "Drop a .md file here")
@@ -111,7 +111,7 @@ final class WelcomeWindowController: NSWindowController {
         }
 
         let button = NSButton(
-            title: "Make Imark the default for .md",
+            title: "Make Margin the default for .md",
             target: self,
             action: #selector(makeDefault)
         )
@@ -184,7 +184,7 @@ final class WelcomeWindowController: NSWindowController {
 
         let skipped = AgentSetup.unsupportedFound
         let alert = NSAlert()
-        alert.messageText = "Set Imark up for your coding agents?"
+        alert.messageText = "Set Margin up for your coding agents?"
         alert.informativeText = [
             "This writes:",
             "",
@@ -195,7 +195,7 @@ final class WelcomeWindowController: NSWindowController {
                 + "and Remove deletes exactly these.",
             skipped.isEmpty ? "" : "\nAlso found, and left alone: "
                 + skipped.map(\.name).joined(separator: ", ")
-                + ". Imark doesn't know where those keep their skills.",
+                + ". Margin doesn't know where those keep their skills.",
         ].joined(separator: "\n")
         alert.addButton(withTitle: "Set Up")
         alert.addButton(withTitle: "Cancel")
@@ -205,7 +205,7 @@ final class WelcomeWindowController: NSWindowController {
             try AgentSetup.install()
         } catch {
             let failure = NSAlert()
-            failure.messageText = "Imark couldn't set that up."
+            failure.messageText = "Margin couldn't set that up."
             failure.informativeText = (error as? LocalizedError)?.errorDescription ?? "\(error)"
             failure.runModal()
         }

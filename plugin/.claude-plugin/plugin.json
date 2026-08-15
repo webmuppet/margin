@@ -1,10 +1,17 @@
 {
-  "name": "imark",
-  "description": "Review plans, diffs and documents in Imark. The agent writes markdown, you comment on it in the app, and your notes come back — through the file, with no server in between.",
+  "name": "margin",
+  "description": "Review plans, diffs and documents in Margin. The agent writes markdown, you comment on it in the app, and your notes come back — through the file, with no server in between.",
   "version": "0.1.0",
   "author": {
-    "name": "migsilva89"
+    "name": "webmuppet"
   },
-  "repository": "https://github.com/migsilva89/imark",
-  "keywords": ["markdown", "review", "annotations", "macos", "ExitPlanMode", "offline"]
+  "repository": "https://github.com/webmuppet/imark",
+  "keywords": [
+    "markdown",
+    "review",
+    "annotations",
+    "macos",
+    "ExitPlanMode",
+    "offline"
+  ]
 }

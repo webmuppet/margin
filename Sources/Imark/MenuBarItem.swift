@@ -23,7 +23,7 @@ final class MenuBarItem {
     private func install() {
         guard item == nil else { return }
         let status = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        status.button?.image = NSImage(systemSymbolName: "doc.text", accessibilityDescription: "Imark")
+        status.button?.image = NSImage(systemSymbolName: "doc.text", accessibilityDescription: "Margin")
         // Template, so it inverts with the menu bar instead of staying dark on
         // a dark bar.
         status.button?.image?.isTemplate = true
@@ -85,7 +85,7 @@ final class MenuBarItem {
         settings.target = NSApp.delegate
 
         let quit = menu.addItem(
-            withTitle: "Quit Imark",
+            withTitle: "Quit Margin",
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: ""
         )

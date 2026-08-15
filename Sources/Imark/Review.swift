@@ -25,7 +25,7 @@ enum Review {
             return URL(fileURLWithPath: override)
         }
         return FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".imark/pending")
+            .appendingPathComponent(".margin/pending")
     }
 
     /// The request an agent registered for this document, if one is waiting.

@@ -1,19 +1,19 @@
 ---
-description: Open a markdown document in Imark for review and wait for the reviewer's notes
+description: Open a markdown document in Margin for review and wait for the reviewer's notes
 argument-hint: "<file.md> [--no-wait]"
 allowed-tools: Bash(node:*)
 ---
 
-Open a document in Imark for the user to review, and wait for their decision.
+Open a document in Margin for the user to review, and wait for their decision.
 
 Run this, passing the arguments through as they came:
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/scripts/imark.mjs" review $ARGUMENTS
+node "${CLAUDE_PLUGIN_ROOT}/scripts/margin.mjs" review $ARGUMENTS
 ```
 
 Markdown only — plans, specs, RFCs, docs. If you are asked to review code, say
-that Imark is a markdown reader and that reviewing code is a job for GitHub or
+that Margin is a markdown reader and that reviewing code is a job for GitHub or
 their editor.
 
 The review happens **on the file itself** — no copy is made. The reviewer's
@@ -39,5 +39,5 @@ reviewer's record of what was asked, the mark is yours of having done it. The
 app shows resolved notes faded, and the next review round will not repeat them
 back to you.
 
-If the command says Imark is not installed, tell the user where the document
+If the command says Margin is not installed, tell the user where the document
 ended up and carry on without the review.

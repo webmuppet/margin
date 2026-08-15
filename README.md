@@ -1,11 +1,11 @@
 <p align="center">
-  <img src=".github/assets/app-icon.png" width="128" height="128" alt="Imark app icon">
+  <img src=".github/assets/app-icon.png" width="128" height="128" alt="Margin app icon">
 </p>
 
-<h1 align="center">Imark ®</h1>
+<h1 align="center">Margin</h1>
 
 <p align="center">
-  <strong>Native Markdown reader for macOS.</strong><br><br>
+  <strong>Native Markdown reader for macOS, that lets you fix what you are reading.</strong><br><br>
   Double-click a <code>.md</code> file and it opens rendered, reloads itself while you<br>
   edit, and previews in the Finder with the space bar. Comment on a phrase and the<br>
   note goes into the file itself. Nothing leaves the machine.
@@ -26,7 +26,7 @@
 <p align="center"><em>Comment on anything. The note goes into the <code>.md</code> file.</em></p>
 
 > [!NOTE]
-> Imark is a reader that will let you fix what you are reading. A block at a time: open one as markdown, correct it, move it, or take it out — see [Editing in place](#editing-in-place). It is not a text editor and is not trying to become one; for anything larger the *Open in* button hands the file to Cursor, VS Code, Sublime, Zed, or whatever else you have installed. One switch in Settings turns all of it off.
+> Margin is a reader that will let you fix what you are reading. A block at a time: open one as markdown, correct it, move it, or take it out — see [Editing in place](#editing-in-place). It is not a text editor and is not trying to become one; for anything larger the *Open in* button hands the file to Cursor, VS Code, Sublime, Zed, or whatever else you have installed. One switch in Settings turns all of it off.
 
 ## What it does
 
@@ -69,15 +69,13 @@ outline folds itself — open [`testdata/everything.md`](testdata/everything.md)
 
 ## Install
 
-```bash
-brew install --cask migsilva89/imark/imark
-```
+Download the [latest release](../../releases/latest) and drag `Margin.app` into `/Applications`, or build it yourself — see [Building from source](#building-from-source).
 
-Or download the [latest release](../../releases/latest) and drag `Imark.app` into `/Applications`. The disk image is signed and notarised, so it opens without a Gatekeeper warning.
+Margin installs beside [Imark](https://github.com/migsilva89/imark) rather than over it: different name, different bundle identifier, its own settings. Neither takes the other's file associations, and a document commented in one opens with its notes intact in the other.
 
-macOS 14 or later. Imark tells you when a newer version exists — once per release, and only if you leave the check on in Settings.
+macOS 14 or later. Margin tells you when a newer version exists — once per release, and only if you leave the check on in Settings.
 
-To make it the default for `.md`: launch it with no document open and click **Make Imark the default for .md**, or use the same item in the **Imark** menu. Once it is the default, both quietly disappear.
+To make it the default for `.md`: launch it with no document open and click **Make Margin the default for .md**, or use the same item in the **Margin** menu. Once it is the default, both quietly disappear.
 
 ## Comments
 
@@ -105,7 +103,7 @@ this app can read:
 
 | Where | What you see |
 |---|---|
-| **Imark** | the words underlined, a dot in the margin, the note on click |
+| **Margin** | the words underlined, a dot in the margin, the note on click |
 | **Cursor, VS Code, Vim** | the block above, verbatim, right under the paragraph |
 | **GitHub, any renderer** | nothing — HTML comments are invisible |
 | **`grep`, `cat`** | the note, with the quote it refers to beside it |
@@ -169,7 +167,7 @@ comment on.
 > [!IMPORTANT]
 > Every edit goes through the same door a comment does: the whole document is
 > put on the undo stack first, and the write is refused outright if the file
-> changed on disk since Imark read it. An edit that would break a note — a
+> changed on disk since Margin read it. An edit that would break a note — a
 > deleted `-->`, one typed into the middle of a note's body, an opening that
 > never closes — is refused with a message naming the note, and what you typed
 > stays on screen.
@@ -183,7 +181,7 @@ thing this app writes.
 
 A plan from a coding agent is markdown. So is a diff, once it is wrapped in a
 fenced block. Because comments live in the file, an agent can hand you a
-document, you can annotate it in Imark, and the agent can read your notes back
+document, you can annotate it in Margin, and the agent can read your notes back
 out — with no server, no port and nothing installed on the other side. The file
 is the whole bridge.
 
@@ -200,7 +198,7 @@ answer and closing is not an answer.
 
 The buttons appear on a document an agent asked to have reviewed, and nowhere
 else: the agent leaves a small file in `~/.imark/pending` naming the document
-before opening it, and Imark writes the decision beside that file. Every other
+before opening it, and Margin writes the decision beside that file. Every other
 `.md` opens exactly as it always did.
 
 [`plugin/`](plugin/README.md) is a Claude Code plugin that does this:
@@ -210,7 +208,7 @@ before opening it, and Imark writes the decision beside that file. Every other
 /imark:imark-notes PLAN.md        # notes you already left
 ```
 
-Launched with no document, Imark offers to **set itself up for the coding agents
+Launched with no document, Margin offers to **set itself up for the coding agents
 on your machine** — one skill, written into each one's `skills` folder. The alert
 names every file before writing it, and undoing it is deleting those. Claude Code
 and Codex read the same `SKILL.md`; only Claude Code also takes the two loose
@@ -220,7 +218,7 @@ commands.
 
 | Where | What, and when |
 |---|---|
-| The `.md` you are reading | when you comment, and when you edit, delete or move a block. Written to a temporary file beside it and moved into place; it refuses to save at all if the document changed on disk since Imark read it. Settings turns everything but commenting off |
+| The `.md` you are reading | when you comment, and when you edit, delete or move a block. Written to a temporary file beside it and moved into place; it refuses to save at all if the document changed on disk since Margin read it. Settings turns everything but commenting off |
 | `~/.imark/pending` | while an agent is waiting on a review: which document, and what you decided. Deleted when the agent reads it |
 | `~/Library/Preferences/pt.miguelsilva.imark.plist` | your settings — theme, text size, width, whether blocks can be edited, the update check |
 | `~/.claude/skills`, `~/.codex/skills`, … | only if you accept the offer to set up your coding agents, and only the files the alert names |
@@ -229,7 +227,7 @@ commands.
 > [!IMPORTANT]
 > Commenting and editing are the only features that write to your documents, and
 > both go the same way: an atomic replace that refuses if the file moved
-> underneath it. Imark keeps the last ten states of a document, so `⌘Z` puts any
+> underneath it. Margin keeps the last ten states of a document, so `⌘Z` puts any
 > of them back. If it ever damages a file, [open an
 > issue](../../issues/new?template=bug_report.yml) before anything else — that is
 > the one bug worth interrupting whatever else is happening.
@@ -265,7 +263,7 @@ cd renderer && npm ci && cd ..
 ./build.sh
 ```
 
-That builds the JavaScript bundle, compiles the Swift, assembles `Imark.app` and
+That builds the JavaScript bundle, compiles the Swift, assembles `Margin.app` and
 installs it to `/Applications`. `npm ci` is not optional: the rendered output is
 generated, not committed, and `build.sh` refuses to assemble an app with a blank
 window.
@@ -296,7 +294,7 @@ it, with no error and no log entry.
 The last change to the document — a note written, edited or deleted, a block
 edited, deleted or moved — up to ten deep. Each one is a snapshot of the whole
 file taken before the change, and the Edit menu names the one it will put back.
-It only covers changes Imark made; edits from your own editor are your editor's
+It only covers changes Margin made; edits from your own editor are your editor's
 to undo.
 
 ### Can I stop it editing my files?
@@ -322,18 +320,24 @@ other.
 
 ## Security, contributing, licence
 
-Imark is a personal project, maintained by one person. Issues get answered and
+Margin is a personal project, maintained by one person. Issues get answered and
 pull requests are welcome —
 [`CONTRIBUTING.md`](CONTRIBUTING.md) says what is out of scope before you spend a
 weekend on it — but there is no support promise and no release schedule. For
 anything that looks like a security problem, [`SECURITY.md`](SECURITY.md) says
 where to send it instead of the issue tracker.
 
-Everything Imark bundles is permissive — MIT, ISC, BSD, Unlicense — with no
+Everything Margin bundles is permissive — MIT, ISC, BSD, Unlicense — with no
 copyleft anywhere in the tree. Several require their copyright notice to travel
 with the binary, so [`THIRD-PARTY.md`](THIRD-PARTY.md) is generated from what
 esbuild actually put in the bundle, on every build, and the same list ships
-inside the app: **Imark › About Imark** shows it.
+inside the app: **Margin › About Margin** shows it.
 
-Imark itself is [MIT](LICENSE) — use it, change it, redistribute it, just keep
-the copyright notice.
+Margin is a fork of [Imark](https://github.com/migsilva89/imark) by Miguel
+Silva, used and modified under the MIT licence — see [`NOTICE.md`](NOTICE.md)
+for what is different and what deliberately is not. The renderer, the comment
+format, the Quick Look extension and the review handshake are all his work.
+This fork is not endorsed by or affiliated with him.
+
+[MIT](LICENSE) throughout — use it, change it, redistribute it, just keep the
+copyright notice.

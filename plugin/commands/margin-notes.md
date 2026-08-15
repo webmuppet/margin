@@ -1,13 +1,13 @@
 ---
-description: Read the Imark comments out of a markdown file
+description: Read the Margin comments out of a markdown file
 argument-hint: "<file.md>"
 allowed-tools: Bash(node:*)
 ---
 
-Read the notes the user left inside a markdown file with Imark.
+Read the notes the user left inside a markdown file with Margin.
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/scripts/imark.mjs" notes $ARGUMENTS
+node "${CLAUDE_PLUGIN_ROOT}/scripts/margin.mjs" notes $ARGUMENTS
 ```
 
 This waits for nothing and opens nothing — it is for when the user has already

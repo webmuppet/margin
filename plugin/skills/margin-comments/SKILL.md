@@ -1,11 +1,11 @@
 ---
 name: imark-comments
-description: Read and write the `<!-- imark … -->` comment blocks that Imark stores inside markdown files. Use when a markdown file contains blocks starting with `<!-- imark`, when the user mentions Imark notes or comments, asks you to read their annotations on a document, or asks for feedback they left in a file to be acted on.
+description: Read and write the `<!-- imark … -->` comment blocks that Margin stores inside markdown files. Use when a markdown file contains blocks starting with `<!-- imark`, when the user mentions Margin notes or comments, asks you to read their annotations on a document, or asks for feedback they left in a file to be acted on.
 ---
 
-# Imark comments
+# Margin comments
 
-Imark is a macOS markdown reader that stores a reader's comments **inside the
+Margin is a macOS markdown reader that stores a reader's comments **inside the
 document**, as HTML comments. Every renderer ignores them, `grep` finds them,
 and they travel with the file. If you are looking at a markdown file with blocks
 like this, that is what they are:
@@ -23,7 +23,7 @@ Workable with which team? This needs a number, not an adjective.
 Do not hand-roll a parser:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/imark.mjs" notes <file.md>
+node "${CLAUDE_PLUGIN_ROOT}/scripts/margin.mjs" notes <file.md>
 ```
 
 By default this shows only the notes still asking for something. A note carrying
@@ -68,12 +68,12 @@ was done.
 
 ## Writing them
 
-Prefer not to. The comments are the user's side of the conversation, and Imark
+Prefer not to. The comments are the user's side of the conversation, and Margin
 owns the file surgery — atomic writes, a staleness check, ten levels of undo.
 Writing a block by hand from an agent gets none of that. Put your own answers in
 your reply, or in a separate document.
 
 If a note must be written into a file anyway, match `format()` in
-`Sources/Imark/Comments.swift` exactly: attributes in the order `quote`, `by`,
+`Sources/Margin/Comments.swift` exactly: attributes in the order `quote`, `by`,
 `at`, `nth`, `color`, a blank line between the note and the block above it, and
 the body escaped as described.

@@ -77,7 +77,7 @@ final class ShortcutsPanel: NSWindowController {
                 return row(keys: keys, title: item.title)
             }
             guard !rows.isEmpty else { continue }
-            stack.addArrangedSubview(header(menu.title.isEmpty ? "Imark" : menu.title))
+            stack.addArrangedSubview(header(menu.title.isEmpty ? "Margin" : menu.title))
             rows.forEach(stack.addArrangedSubview)
         }
 

@@ -3,7 +3,7 @@
 // markdown document, build a document for somebody to review, and block until
 // they have decided.
 //
-// The escaping here is the mirror image of Sources/Imark/Comments.swift. If one
+// The escaping here is the mirror image of Sources/Margin/Comments.swift. If one
 // side ever grows a rule the other must grow it too.
 
 import { spawnSync } from 'node:child_process'
@@ -242,7 +242,7 @@ carry on.
 
 Comment wherever you like until then — nothing you write decides anything.
 
-If you are reading this in a build of Imark without those buttons, commenting on
+If you are reading this in a build of Margin without those buttons, commenting on
 the word **approve** or the word **revise** does the same thing.
 `
 
@@ -250,10 +250,10 @@ the word **approve** or the word **revise** does the same thing.
 
 function imarkInstalled() {
   const found = spawnSync('/usr/bin/mdfind', [
-    'kMDItemCFBundleIdentifier == "pt.miguelsilva.imark"',
+    'kMDItemCFBundleIdentifier == "nz.co.humanloop.margin"',
   ], { encoding: 'utf8' })
   if (found.status === 0 && found.stdout.trim()) return true
-  return fs.existsSync('/Applications/Imark.app')
+  return fs.existsSync('/Applications/Margin.app')
 }
 
 function openInImark(file) {
@@ -261,13 +261,13 @@ function openInImark(file) {
   // click, so it needs the waiting without a window appearing on somebody's
   // screen every time the suite runs.
   if (process.env.IMARK_TEST_NO_OPEN) return
-  const result = spawnSync('/usr/bin/open', ['-a', 'Imark', file], { encoding: 'utf8' })
+  const result = spawnSync('/usr/bin/open', ['-a', 'Margin', file], { encoding: 'utf8' })
   if (result.status !== 0) throw new Error(result.stderr?.trim() || 'open failed')
 }
 
 /**
  * Block until a decision note appears. Polls rather than watches: fs.watch on
- * macOS misses the write-to-temporary-and-rename that Imark does on purpose,
+ * macOS misses the write-to-temporary-and-rename that Margin does on purpose,
  * which is exactly the write we are waiting for.
  */
 async function waitForDecision(file, request, { timeoutMs = 4 * 60 * 60 * 1000 } = {}) {
@@ -292,7 +292,7 @@ async function waitForDecision(file, request, { timeoutMs = 4 * 60 * 60 * 1000 }
       }
     } catch { /* no decision yet */ }
 
-    // The words, still — for a document opened in a build of Imark without the
+    // The words, still — for a document opened in a build of Margin without the
     // toolbar, and because a review that only one version of one app can finish
     // is not the file-is-the-bridge thing this was supposed to be.
     try {
@@ -331,7 +331,7 @@ async function waitForDecision(file, request, { timeoutMs = 4 * 60 * 60 * 1000 }
 // gave. A fresh nonce per invocation has no history to find.
 function pendingDir() {
   const dir = process.env.IMARK_PENDING_DIR
-    || path.join(os.homedir(), '.imark', 'pending')
+    || path.join(os.homedir(), '.margin', 'pending')
   fs.mkdirSync(dir, { recursive: true })
   // A crashed script leaves its request behind. Anything old enough that
   // nobody can still be waiting on it is litter, not state.
@@ -487,7 +487,7 @@ function report(file, result, { ephemeral = false } = {}) {
  */
 async function cmdNotes(argv) {
   const file = argv.find((a) => !a.startsWith('-'))
-  if (!file) throw new Error('usage: imark.mjs notes <file.md> [--all] [--json]')
+  if (!file) throw new Error('usage: margin.mjs notes <file.md> [--all] [--json]')
 
   const notes = parseNotes(fs.readFileSync(file, 'utf8'))
   const all = argv.includes('--all')
@@ -516,7 +516,7 @@ async function cmdReview(argv) {
   let ephemeral = false
 
   if (files.length > 0) {
-    // Markdown only. Imark is a markdown reader, and a review of a `.js` here
+    // Markdown only. Margin is a markdown reader, and a review of a `.js` here
     // would be prose typography wrapped around something that has no prose in
     // it. Reviewing code is a real job and this is not the tool for it.
     const wrong = files.filter((file) => !file.endsWith('.md'))
@@ -541,11 +541,11 @@ async function cmdReview(argv) {
     // come before the read rather than after it: the version that checked for
     // empty input afterwards simply hung.
     if (process.stdin.isTTY) {
-      throw new Error('usage: imark.mjs review <file.md> [--no-wait]')
+      throw new Error('usage: margin.mjs review <file.md> [--no-wait]')
     }
     const document = fs.readFileSync(0, 'utf8')
     if (!document.trim()) {
-      throw new Error('usage: imark.mjs review <file.md> [--no-wait]')
+      throw new Error('usage: margin.mjs review <file.md> [--no-wait]')
     }
     const title = argv.includes('--title') ? argv[argv.indexOf('--title') + 1] : 'Review — note'
     target = writeEphemeral({ title, body: document })
@@ -553,7 +553,7 @@ async function cmdReview(argv) {
   }
 
   if (!imarkInstalled()) {
-    say(`Imark is not installed. The document is at ${target}.`)
+    say(`Margin is not installed. The document is at ${target}.`)
     return
   }
 
@@ -566,8 +566,8 @@ async function cmdReview(argv) {
     if (ephemeral) fs.rmSync(target, { force: true })
     throw error
   }
-  if (!wait) { say(`Opened in Imark: ${target}`); return }
-  say(`Opened in Imark: ${target}\nWaiting for Approve or Send Back in the window…`)
+  if (!wait) { say(`Opened in Margin: ${target}`); return }
+  say(`Opened in Margin: ${target}\nWaiting for Approve or Send Back in the window…`)
 
   const result = await waitForDecision(target, request)
   withdraw(request)
@@ -655,7 +655,7 @@ if (invoked) {
       case 'plan-hook': await cmdPlanHook(); break
       case 'open': openInImark(argv[0]); break
       default:
-        say('usage: imark.mjs <notes|review|open|plan-hook> …')
+        say('usage: margin.mjs <notes|review|open|plan-hook> …')
         process.exit(command ? 1 : 0)
     }
   } catch (error) {

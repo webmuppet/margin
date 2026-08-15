@@ -2,16 +2,16 @@ import Foundation
 import WebKit
 import UniformTypeIdentifiers
 
-/// Serves the whole page over a private `imark://` scheme:
+/// Serves the whole page over a private `margin://` scheme:
 ///
-///   imark://app/bundle.js        → Contents/Resources/bundle.js
-///   imark://file/abs/path/x.png  → /abs/path/x.png
+///   margin://app/bundle.js        → Contents/Resources/bundle.js
+///   margin://file/abs/path/x.png  → /abs/path/x.png
 ///
 /// Going through a scheme handler instead of `file://` means images sitting
 /// next to the document load normally without handing the web view read access
 /// to a directory, and it keeps the CSP in index.html airtight.
 public final class SchemeHandler: NSObject, WKURLSchemeHandler {
-    public static let scheme = "imark"
+    public static let scheme = "margin"
 
     private let resources = SchemeHandler.resourcesDirectory()
 

@@ -21,17 +21,17 @@ import Foundation
         check("installed", AgentSetup.isInstalled)
 
         let review = URL(fileURLWithPath: home)
-            .appendingPathComponent(".claude/commands/imark-review.md")
+            .appendingPathComponent(".claude/commands/margin-review.md")
         let text = try String(contentsOf: review, encoding: .utf8)
         check("the command exists", FileManager.default.fileExists(atPath: review.path))
         check("no plugin placeholder left", !text.contains("CLAUDE_PLUGIN_ROOT"))
         check("carries the real script path", text.contains(AgentSetup.script!.path))
 
         let skill = try String(contentsOf: root
-            .appendingPathComponent(".claude/skills/imark-comments/SKILL.md"), encoding: .utf8)
+            .appendingPathComponent(".claude/skills/margin-comments/SKILL.md"), encoding: .utf8)
         check("the skill was rewritten too", !skill.contains("CLAUDE_PLUGIN_ROOT"))
 
-        let codex = root.appendingPathComponent(".codex/skills/imark-comments/SKILL.md")
+        let codex = root.appendingPathComponent(".codex/skills/margin-comments/SKILL.md")
         check("Codex got the same skill", FileManager.default.fileExists(atPath: codex.path))
         check("with the same contents", (try? String(contentsOf: codex, encoding: .utf8)) == skill)
         // Codex removed its global commands folder, so writing one there would

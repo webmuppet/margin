@@ -31,9 +31,9 @@ enum Comments {
 
         var errorDescription: String? {
             switch self {
-            case .fileChanged: "This file changed on disk since Imark opened it."
-            case .unreadable: "Imark can't read this file as UTF-8 text."
-            case .outOfRange: "Those lines are no longer where Imark thought they were."
+            case .fileChanged: "This file changed on disk since Margin opened it."
+            case .unreadable: "Margin can't read this file as UTF-8 text."
+            case .outOfRange: "Those lines are no longer where Margin thought they were."
             }
         }
     }

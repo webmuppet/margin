@@ -90,7 +90,7 @@ review the reviewer was looking at. The agent waited four hours for a decision
 that had already been made. Every suite passed: all of them reviewed a clean
 document once.
 
-So a change to `Review.swift` or to the handshake in `plugin/scripts/imark.mjs`
+So a change to `Review.swift` or to the handshake in `plugin/scripts/margin.mjs`
 is not tested until it is tested **twice over the same document, with a
 leftover in the directory**. Three cases in `Support/test-review.sh` hold that
 line — the abandoned round, the interrupted one, the sweep — and a fourth

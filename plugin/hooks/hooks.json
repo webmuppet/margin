@@ -1,5 +1,5 @@
 {
-  "description": "Optional plan review in Imark. Does nothing unless IMARK_PLAN_REVIEW is set.",
+  "description": "Optional plan review in Margin. Does nothing unless IMARK_PLAN_REVIEW is set.",
   "hooks": {
     "PermissionRequest": [
       {
@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/imark.mjs\" plan-hook",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/margin.mjs\" plan-hook",
             "timeout": 345600
           }
         ]

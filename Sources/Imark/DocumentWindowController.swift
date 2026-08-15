@@ -215,7 +215,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         // all, and a block committed from down there would append it.
         if text.utf8.count > Self.sizeLimit {
             let prefix = String(decoding: Array(text.utf8.prefix(Self.sizeLimit)), as: UTF8.self)
-            text = prefix + "\n\n---\n\n> **Truncated.** Above 5 MB Imark shows only the beginning."
+            text = prefix + "\n\n---\n\n> **Truncated.** Above 5 MB Margin shows only the beginning."
             stamp = Comments.Stamp(of: url)
             content.renderer.render(markdown: text, path: url.path)
             return

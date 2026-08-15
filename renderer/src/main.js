@@ -56,7 +56,7 @@ function resolveLocal(href) {
 
 // Local files are served by a WKURLSchemeHandler on the Swift side so that
 // images next to the document load without granting file:// access.
-const fileURL = (absPath) => `imark://file${absPath.split('/').map(encodeURIComponent).join('/')}`
+const fileURL = (absPath) => `margin://file${absPath.split('/').map(encodeURIComponent).join('/')}`
 
 const isExternal = (href) => /^[a-z][a-z0-9+.-]*:/i.test(href) && !href.startsWith('imark:')
 
@@ -1646,8 +1646,8 @@ document.addEventListener('click', (event) => {
   }
 
   event.preventDefault()
-  if (href.startsWith('imark://file')) {
-    const path = decodeURIComponent(href.replace('imark://file', ''))
+  if (href.startsWith('margin://file')) {
+    const path = decodeURIComponent(href.replace('margin://file', ''))
     bridge({ type: 'openLocal', path })
   } else if (isExternal(href)) {
     bridge({ type: 'openExternal', url: href })

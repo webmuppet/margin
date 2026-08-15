@@ -10,7 +10,7 @@
 // its third round handed back twenty finished requests to bury the two live
 // ones.
 
-import { flatten, parseNotes } from '../plugin/scripts/imark.mjs'
+import { flatten, parseNotes } from '../plugin/scripts/margin.mjs'
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -89,7 +89,7 @@ check('the missing quote is an orphan', notes[2].orphan === true)
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'imark-notes-'))
 const file = path.join(dir, 'SPEC.md')
 fs.writeFileSync(file, doc)
-const script = new URL('../plugin/scripts/imark.mjs', import.meta.url).pathname
+const script = new URL('../plugin/scripts/margin.mjs', import.meta.url).pathname
 const run = (...args) => execFileSync('node', [script, 'notes', file, ...args], { encoding: 'utf8' })
 
 console.log('▸ notes hands over the work, not the archive')

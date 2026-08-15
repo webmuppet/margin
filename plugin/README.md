@@ -1,7 +1,7 @@
-# Imark for Claude Code
+# Margin for Claude Code
 
 Review what an agent hands you — a plan, a diff, a document — in
-[Imark](../README.md) instead of in the terminal. Comment on the phrases you
+[Margin](../README.md) instead of in the terminal. Comment on the phrases you
 disagree with, and the notes come back to the agent.
 
 The file is the bridge. No server, no port, no browser, and nothing leaves the
@@ -14,25 +14,25 @@ machine.
 /plugin install imark@imark
 ```
 
-Needs Imark in `/Applications` and Node 20.
+Needs Margin in `/Applications` and Node 20.
 
 ## Use
 
 ```
-/imark:imark-review PLAN.md       # review a markdown document
-/imark:imark-notes PLAN.md        # the notes still waiting on something
+/margin:margin-review PLAN.md       # review a markdown document
+/margin:margin-notes PLAN.md        # the notes still waiting on something
 ```
 
-`imark-notes` hands over the open notes only. One you have already dealt with is
+`margin-notes` hands over the open notes only. One you have already dealt with is
 marked `resolved=` and stays in the document as the record of what was asked, but
 it is history rather than work — the header says how many were held back, and
 `--all` produces them.
 
-Markdown only — plans, specs, RFCs, docs. Imark is a markdown reader, and
+Markdown only — plans, specs, RFCs, docs. Margin is a markdown reader, and
 reviewing code is a real job this is not the tool for; that is what GitHub or
 your editor is for.
 
-`imark-review` opens **the file itself** in Imark and **blocks**. You read it,
+`margin-review` opens **the file itself** in Margin and **blocks**. You read it,
 comment where you want to, and finish with the two buttons at the top of the
 window:
 
@@ -53,7 +53,7 @@ document is made anywhere. Only content with no file of its own — a plan piped
 from planning mode, several files at once — opens as a temporary stand-in,
 cleaned up afterwards.
 
-On a build of Imark without those buttons, commenting on the word **approve**
+On a build of Margin without those buttons, commenting on the word **approve**
 or the word **revise** does the same thing. A review only one version of one
 app can finish would not be much of a bridge.
 
@@ -67,13 +67,13 @@ hung session. Turn it on deliberately:
 export IMARK_PLAN_REVIEW=1
 ```
 
-With it set, leaving plan mode opens the plan in Imark and waits. Commenting on
+With it set, leaving plan mode opens the plan in Margin and waits. Commenting on
 **rever** denies the permission request and hands the agent every note you
 wrote, so it revises instead of building.
 
 ## What it does not do
 
-- **No drawing.** Text on a phrase, which is what Imark does.
+- **No drawing.** Text on a phrase, which is what Margin does.
 - **No code review.** Markdown documents only. A ```diff block *inside* a plan
   renders properly — agents write those all the time — but there is no command
   that turns a repository's changes into a review.
@@ -82,18 +82,18 @@ wrote, so it revises instead of building.
 
 ## Where the code is
 
-The plugin is one file — [`scripts/imark.mjs`](scripts/imark.mjs), the parser,
+The plugin is one file — [`scripts/margin.mjs`](scripts/margin.mjs), the parser,
 the review documents and the hook, with no dependencies. Its escaping is the
-mirror image of `Sources/Imark/Comments.swift`; if one side grows a rule, the
+mirror image of `Sources/Margin/Comments.swift`; if one side grows a rule, the
 other has to grow it too.
 
-The app's side is `Sources/Imark/Review.swift` and `ReviewButton.swift`. That is
-the only part of Imark that knows another tool exists, and it is meant to stay
+The app's side is `Sources/Margin/Review.swift` and `ReviewButton.swift`. That is
+the only part of Margin that knows another tool exists, and it is meant to stay
 that way.
 
 ```bash
-node scripts/imark.mjs notes ../testdata/comments.md
+node scripts/margin.mjs notes ../testdata/comments.md
 ```
 
-Its escaping is the mirror image of `Sources/Imark/Comments.swift`; if one side
+Its escaping is the mirror image of `Sources/Margin/Comments.swift`; if one side
 grows a rule, the other has to grow it too.

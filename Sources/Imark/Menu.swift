@@ -44,8 +44,8 @@ enum Menu {
     }
 
     private static func appMenu() -> NSMenu {
-        let menu = NSMenu(title: "Imark")
-        menu.addItem(withTitle: "About Imark", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        let menu = NSMenu(title: "Margin")
+        menu.addItem(withTitle: "About Margin", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         let updates = menu.addItem(
             withTitle: "Check for Updates…",
             action: #selector(AppDelegate.checkForUpdates(_:)),
@@ -61,16 +61,16 @@ enum Menu {
         settings.target = NSApp.delegate
         menu.addItem(.separator())
         let makeDefault = menu.addItem(
-            withTitle: "Make Imark the Default for .md",
+            withTitle: "Make Margin the Default for .md",
             action: #selector(AppDelegate.makeDefaultHandler(_:)),
             keyEquivalent: ""
         )
         makeDefault.target = NSApp.delegate
         menu.addItem(.separator())
-        let hide = menu.addItem(withTitle: "Hide Imark", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        let hide = menu.addItem(withTitle: "Hide Margin", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         hide.target = NSApp
         menu.addItem(.separator())
-        let quit = menu.addItem(withTitle: "Quit Imark", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quit = menu.addItem(withTitle: "Quit Margin", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quit.target = NSApp
         return menu
     }

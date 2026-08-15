@@ -332,7 +332,7 @@ extension DocumentWindowController: NSToolbarDelegate {
             }
         } catch {
             let alert = NSAlert(error: error)
-            alert.messageText = "Imark couldn't record that decision."
+            alert.messageText = "Margin couldn't record that decision."
             alert.runModal()
         }
     }

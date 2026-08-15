@@ -62,8 +62,8 @@ enum AgentSetup {
         return FileManager.default.homeDirectoryForCurrentUser
     }
 
-    private static let skillName = "imark-comments"
-    private static let commandNames = ["imark-review.md", "imark-notes.md"]
+    private static let skillName = "margin-comments"
+    private static let commandNames = ["margin-review.md", "margin-notes.md"]
 
     static func skillFile(for agent: Agent) -> URL {
         homeDirectory.appendingPathComponent("\(agent.skills)/\(skillName)/SKILL.md")
@@ -112,7 +112,7 @@ enum AgentSetup {
     /// The script, inside the bundle. It travels with the app so that updating
     /// the app updates it, and so there is nothing to keep in sync by hand.
     static var script: URL? {
-        resources?.appendingPathComponent("agent/imark.mjs")
+        resources?.appendingPathComponent("agent/margin.mjs")
     }
 
     enum Failure: LocalizedError {
@@ -121,8 +121,8 @@ enum AgentSetup {
 
         var errorDescription: String? {
             switch self {
-            case .missingResources: "This copy of Imark is missing the agent files."
-            case .cannotWrite(let path): "Imark couldn't write to \(path)."
+            case .missingResources: "This copy of Margin is missing the agent files."
+            case .cannotWrite(let path): "Margin couldn't write to \(path)."
             }
         }
     }
@@ -169,7 +169,7 @@ enum AgentSetup {
             throw Failure.missingResources
         }
         return text.replacingOccurrences(
-            of: "${CLAUDE_PLUGIN_ROOT}/scripts/imark.mjs",
+            of: "${CLAUDE_PLUGIN_ROOT}/scripts/margin.mjs",
             with: script.path
         )
     }

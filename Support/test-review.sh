@@ -75,7 +75,7 @@ run() {   # run <decision> <notes-in-document> [extra-note-block] → what the a
     fi
   } > SPEC.md
 
-  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/imark.mjs" review SPEC.md > out.txt 2>&1 &
+  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/margin.mjs" review SPEC.md > out.txt 2>&1 &
   local pid=$!
 
   local request; request="$(wait_for "$IMARK_PENDING_DIR/*.json")"
@@ -148,7 +148,7 @@ EOF
 { "decision": "approve", "notes": 0, "at": "2026-08-06T00:00:01Z" }
 EOF
 
-  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/imark.mjs" review SPEC.md > out.txt 2>&1 &
+  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/margin.mjs" review SPEC.md > out.txt 2>&1 &
   local pid=$!
   sleep 1.5
   if kill -0 "$pid" 2>/dev/null; then
@@ -181,7 +181,7 @@ abandoned() {
   mkdir -p "$IMARK_PENDING_DIR"
   printf '# Plan\n\nA paragraph that is going to be reviewed.\n' > SPEC.md
 
-  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/imark.mjs" review SPEC.md > out.txt 2>&1 &
+  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/margin.mjs" review SPEC.md > out.txt 2>&1 &
   local pid=$!
   local request; request="$(wait_for "$IMARK_PENDING_DIR/*.json")"
   if [[ -z "$request" ]]; then
@@ -229,7 +229,7 @@ interrupted() {
   export IMARK_PENDING_DIR="$dir/pending"
   printf '# Plan\n\nA paragraph that is going to be reviewed.\n' > SPEC.md
 
-  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/imark.mjs" review SPEC.md > out.txt 2>&1 &
+  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/margin.mjs" review SPEC.md > out.txt 2>&1 &
   local pid=$!
   local request; request="$(wait_for "$IMARK_PENDING_DIR/*.json")"
   # Closing the session, or Ctrl-C in the terminal.
@@ -259,7 +259,7 @@ EOF
 { "file": "$(pwd)/OTHER.md", "at": "2026-08-13T21:31:17.392Z", "by": "Claude Code" }
 EOF
 
-  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/imark.mjs" review SPEC.md > out.txt 2>&1 &
+  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/margin.mjs" review SPEC.md > out.txt 2>&1 &
   local pid=$!
   sleep 1
   ls "$IMARK_PENDING_DIR" | sed 's/^/PENDING: /'
@@ -284,12 +284,12 @@ hook() {   # hook <on|off> <decision> → prints the JSON Claude Code reads
   }))'
 
   if [[ "$gate" == off ]]; then
-    node "$OLDPWD/plugin/scripts/imark.mjs" plan-hook < ev.json
+    node "$OLDPWD/plugin/scripts/margin.mjs" plan-hook < ev.json
     unset IMARK_PENDING_DIR; cd "$OLDPWD"; rm -rf "$dir"; return
   fi
 
   IMARK_TEST_NO_OPEN=1 IMARK_PLAN_REVIEW=1 \
-    node "$OLDPWD/plugin/scripts/imark.mjs" plan-hook < ev.json > out.json 2>/dev/null &
+    node "$OLDPWD/plugin/scripts/margin.mjs" plan-hook < ev.json > out.json 2>/dev/null &
   local pid=$!
   # A plan has no file of its own, so this one review still opens a stand-in.
   local review; review="$(wait_for "$IMARK_PENDING_DIR/*.md")"
@@ -311,7 +311,7 @@ ordinary() {   # ordinary <quoted-word> → "still waiting" or what came back
   export IMARK_PENDING_DIR="$dir/pending"
   printf '# Plan\n\nWe go through the tables one at a time, and it is ok.\n' > SPEC.md
 
-  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/imark.mjs" review SPEC.md > out.txt 2>&1 &
+  IMARK_TEST_NO_OPEN=1 node "$OLDPWD/plugin/scripts/margin.mjs" review SPEC.md > out.txt 2>&1 &
   local pid=$!
 
   local request; request="$(wait_for "$IMARK_PENDING_DIR/*.json")"

@@ -36,7 +36,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "Imark Settings"
+        window.title = "Margin Settings"
         super.init(window: window)
         window.delegate = self
 
@@ -170,7 +170,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         editor.target = self
         editor.action = #selector(editorChanged)
 
-        makeDefault.title = "Make Imark the Default"
+        makeDefault.title = "Make Margin the Default"
         makeDefault.bezelStyle = .rounded
         makeDefault.target = self
         makeDefault.action = #selector(makeDefaultPressed)
@@ -180,7 +180,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
             accessibilityDescription: nil
         ) ?? NSImage())
         tick.contentTintColor = .systemGreen
-        let done = NSTextField(labelWithString: "Imark opens them")
+        let done = NSTextField(labelWithString: "Margin opens them")
         done.textColor = .secondaryLabelColor
         isDefault.setViews([tick, done], in: .leading)
         isDefault.spacing = 6
@@ -201,7 +201,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         // margin, and the key. Comments are named too, because "editing" off
         // and the speech bubble still there would otherwise read as a bug.
         editing.toolTip = "The margin offers a way into a block's markdown, and "
-            + "delete removes the block under the pointer. Off leaves Imark "
+            + "delete removes the block under the pointer. Off leaves Margin "
             + "reading only — comments still write, as they always have."
 
         updates.title = "Check for new versions once a day"

@@ -137,7 +137,7 @@ public final class RendererView: NSView {
             webView.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
 
-        webView.load(URLRequest(url: URL(string: "imark://app/index.html")!))
+        webView.load(URLRequest(url: URL(string: "margin://app/index.html")!))
     }
 
     @available(*, unavailable)
@@ -304,7 +304,7 @@ public final class RendererView: NSView {
     }
 
     public func reloadPage() {
-        webView.load(URLRequest(url: URL(string: "imark://app/index.html")!))
+        webView.load(URLRequest(url: URL(string: "margin://app/index.html")!))
     }
 
     // MARK: - Bridge

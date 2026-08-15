@@ -26,11 +26,11 @@ for arg in "$@"; do
 done
 
 if [ "$DEV" -eq 1 ]; then
-	APP_NAME="Imark Dev"
-	BUNDLE_ID="pt.miguelsilva.imark.dev"
+	APP_NAME="Margin Dev"
+	BUNDLE_ID="nz.co.humanloop.margin.dev"
 else
-	APP_NAME="Imark"
-	BUNDLE_ID="pt.miguelsilva.imark"
+	APP_NAME="Margin"
+	BUNDLE_ID="nz.co.humanloop.margin"
 fi
 
 APP="$ROOT/dist/$APP_NAME.app"
@@ -108,8 +108,8 @@ fi
 # same files the plugin ships — so the two can never drift apart, and the paths
 # inside them are rewritten to this bundle when somebody installs them.
 mkdir -p "$APP/Contents/Resources/agent/commands"
-cp "$ROOT/plugin/scripts/imark.mjs" "$APP/Contents/Resources/agent/imark.mjs"
-cp "$ROOT/plugin/skills/imark-comments/SKILL.md" "$APP/Contents/Resources/agent/SKILL.md"
+cp "$ROOT/plugin/scripts/margin.mjs" "$APP/Contents/Resources/agent/margin.mjs"
+cp "$ROOT/plugin/skills/margin-comments/SKILL.md" "$APP/Contents/Resources/agent/SKILL.md"
 cp "$ROOT"/plugin/commands/*.md "$APP/Contents/Resources/agent/commands/"
 
 # macOS shows Credits.html in the standard About panel on its own, so the

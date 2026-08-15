@@ -126,7 +126,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MarkdownType.makeImarkDefault { ok in
             let alert = NSAlert()
             alert.messageText = ok
-                ? "Imark is now the default for .md"
+                ? "Margin is now the default for .md"
                 : "Couldn't change the default app"
             alert.informativeText = ok
                 ? "Double-clicking a markdown file in the Finder opens it here."

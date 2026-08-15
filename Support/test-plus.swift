@@ -15,7 +15,7 @@ import WebKit
 let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
 let resources = repo.appendingPathComponent("Resources")
 
-// The page is served over `imark://` in the app and its CSP says so, which a
+// The page is served over `margin://` in the app and its CSP says so, which a
 // file:// load cannot satisfy. A copy without the policy is the whole of the
 // difference between this harness and the real thing.
 let stage = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("imark-test-plus")
@@ -29,7 +29,16 @@ html = html.replacingOccurrences(
     options: [.regularExpression, .caseInsensitive]
 )
 // And the bundle is asked for by scheme, which only the app's handler answers.
-html = html.replacingOccurrences(of: "imark://app/", with: "")
+// Whatever the scheme is called. This script runs standalone and cannot
+// import SchemeHandler to ask, and naming it here by hand is how the rename
+// broke it: the old prefix no longer matched, the bundle was never fetched,
+// and every case failed with `window.imark` undefined — which reads as the
+// renderer being broken rather than the harness being out of date.
+html = html.replacingOccurrences(
+    of: #"[a-z][a-z0-9+.-]*://app/"#,
+    with: "",
+    options: [.regularExpression, .caseInsensitive]
+)
 try! html.write(to: page, atomically: true, encoding: .utf8)
 
 let SCRIPT = """
