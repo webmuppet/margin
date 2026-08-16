@@ -9,7 +9,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-APP="${IMARK_APP:-/Applications/Imark.app}"
+APP="${IMARK_APP:-/Applications/Margin.app}"
 if [ ! -d "$APP/Contents/Resources/agent" ]; then
   echo "FAIL $APP is missing the agent files — run ./build.sh first"
   exit 1

@@ -1,21 +1,22 @@
 name: Idea
-description: Something Imark could do that it does not
+description: Something Margin could do that it does not
 labels: [idea]
 body:
   - type: markdown
     attributes:
       value: >
-        Worth reading first: Imark is a reader, not an editor, it is macOS only,
-        and it keeps no vault or database. Ideas that pull in those directions
-        are the ones most likely to be turned down — see
-        [CONTRIBUTING](https://github.com/migsilva89/imark/blob/main/CONTRIBUTING.md).
+        Worth reading first: Margin reads, and edits a block at a time — but it
+        is not a text editor, it is macOS only, and it keeps no vault or
+        database. Ideas that pull in those directions are the ones most likely
+        to be turned down — see
+        [CONTRIBUTING](https://github.com/webmuppet/margin/blob/main/CONTRIBUTING.md).
 
   - type: textarea
     attributes:
       label: What you were trying to do
       description: >
         The situation, not the solution. What you were working on when you
-        wished Imark did this.
+        wished Margin did this.
     validations:
       required: true
 

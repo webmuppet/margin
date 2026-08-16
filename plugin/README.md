@@ -10,8 +10,8 @@ machine.
 ## Install
 
 ```bash
-/plugin marketplace add migsilva89/imark
-/plugin install imark@imark
+/plugin marketplace add webmuppet/margin
+/plugin install margin@margin
 ```
 
 Needs Margin in `/Applications` and Node 20.
@@ -84,10 +84,10 @@ wrote, so it revises instead of building.
 
 The plugin is one file — [`scripts/margin.mjs`](scripts/margin.mjs), the parser,
 the review documents and the hook, with no dependencies. Its escaping is the
-mirror image of `Sources/Margin/Comments.swift`; if one side grows a rule, the
+mirror image of `Sources/Imark/Comments.swift`; if one side grows a rule, the
 other has to grow it too.
 
-The app's side is `Sources/Margin/Review.swift` and `ReviewButton.swift`. That is
+The app's side is `Sources/Imark/Review.swift` and `ReviewButton.swift`. That is
 the only part of Margin that knows another tool exists, and it is meant to stay
 that way.
 
@@ -95,5 +95,5 @@ that way.
 node scripts/margin.mjs notes ../testdata/comments.md
 ```
 
-Its escaping is the mirror image of `Sources/Margin/Comments.swift`; if one side
+Its escaping is the mirror image of `Sources/Imark/Comments.swift`; if one side
 grows a rule, the other has to grow it too.

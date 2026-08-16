@@ -49,7 +49,7 @@
 
 | Document window | Quick Look preview |
 |:---:|:---:|
-| ![A document window with the outline sidebar and syntax-highlighted code](.github/assets/imark-window.png) | ![The Finder preview panel, with the outline rail down the left edge](.github/assets/imark-quicklook.png) |
+| ![A document window with the outline sidebar and syntax-highlighted code](.github/assets/margin-window.png) | ![The Finder preview panel, with the outline rail down the left edge](.github/assets/margin-quicklook.png) |
 
 Both are rendering [`testdata/showcase.md`](testdata/showcase.md). For the full
 sweep — every construction, every kind of comment, and enough headings that the
@@ -62,7 +62,7 @@ outline folds itself — open [`testdata/everything.md`](testdata/everything.md)
 <p align="center"><em>Space bar in the Finder. No app to open first.</em></p>
 
 <p align="center">
-  <img src=".github/assets/imark-rail.png" width="520" alt="The rail tapering around the pointer, with a card naming the section and quoting its first line">
+  <img src=".github/assets/margin-rail.png" width="520" alt="The rail tapering around the pointer, with a card naming the section and quoting its first line">
 </p>
 
 <p align="center"><em>The rail: one tick per heading, in the window and in the Finder's preview panel alike. Click to jump, or press and drag to scrub.</em></p>
@@ -80,7 +80,7 @@ To make it the default for `.md`: launch it with no document open and click **Ma
 ## Comments
 
 <p align="center">
-  <img src=".github/assets/imark-comments.png" width="620" alt="A phrase underlined in the text, a dot in the margin, and a card floating over the right margin with the note">
+  <img src=".github/assets/margin-comments.png" width="620" alt="A phrase underlined in the text, a dot in the margin, and a card floating over the right margin with the note">
 </p>
 
 Select a phrase, press the speech bubble, write, press `↵`. The quoted words get
@@ -217,8 +217,8 @@ before opening it, and Margin writes the decision beside that file. Every other
 [`plugin/`](plugin/README.md) is a Claude Code plugin that does this:
 
 ```
-/imark:imark-review PLAN.md       # review a markdown document
-/imark:imark-notes PLAN.md        # notes you already left
+/margin:margin-review PLAN.md     # review a markdown document
+/margin:margin-notes PLAN.md      # notes you already left
 ```
 
 Launched with no document, Margin offers to **set itself up for the coding agents
@@ -233,7 +233,7 @@ commands.
 |---|---|
 | The `.md` you are reading | when you comment, and when you edit, delete or move a block. Written to a temporary file beside it and moved into place; it refuses to save at all if the document changed on disk since Margin read it. Settings turns everything but commenting off |
 | `~/.margin/pending` | while an agent is waiting on a review: which document, and what you decided. Deleted when the agent reads it |
-| `~/Library/Preferences/pt.miguelsilva.imark.plist` | your settings — theme, text size, width, whether blocks can be edited, the update check |
+| `~/Library/Preferences/nz.co.humanloop.margin.plist` | your settings — theme, text size, width, whether blocks can be edited, the update check |
 | `~/.claude/skills`, `~/.codex/skills`, … | only if you accept the offer to set up your coding agents, and only the files the alert names |
 | The network | one request a day to `api.github.com` asking whether a newer version exists. A version number travels, nothing of yours does, and Settings turns it off |
 
@@ -270,8 +270,8 @@ and `⌘~`, not `⌘[` and `⌘]`.
 Requires Xcode 16 or later and Node 20.
 
 ```bash
-git clone https://github.com/migsilva89/imark.git
-cd imark
+git clone https://github.com/webmuppet/margin.git
+cd margin
 cd renderer && npm ci && cd ..
 ./build.sh
 ```

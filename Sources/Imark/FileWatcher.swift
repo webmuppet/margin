@@ -19,7 +19,7 @@ final class FileWatcher {
     private var source: DispatchSourceFileSystemObject?
     private var descriptor: CInt = -1
     private var pending: DispatchWorkItem?
-    private let queue = DispatchQueue(label: "pt.miguelsilva.imark.watch")
+    private let queue = DispatchQueue(label: "nz.co.humanloop.margin.watch")
 
     init(url: URL, debounce: TimeInterval = 0.12, handler: @escaping (Event) -> Void) {
         self.url = url

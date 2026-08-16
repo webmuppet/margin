@@ -24,9 +24,9 @@ SIGN_IDENTITY="${IMARK_SIGN_IDENTITY:-}"
 NOTARY_PROFILE="${IMARK_NOTARY_PROFILE:-}"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Support/Imark-Info.plist)"
 
-APP="$ROOT/dist/Imark.app"
+APP="$ROOT/dist/Margin.app"
 STAGE="$ROOT/dist/dmg"
-DMG="$ROOT/dist/Imark-$VERSION.dmg"
+DMG="$ROOT/dist/Margin-$VERSION.dmg"
 
 step() { printf '\n\033[1;35m▸ %s\033[0m\n' "$1"; }
 die() { printf '\n\033[1;31m✗ %s\033[0m\n' "$1" >&2; exit 1; }
@@ -109,7 +109,7 @@ cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 
 hdiutil create \
-	-volname "Imark $VERSION" \
+	-volname "Margin $VERSION" \
 	-srcfolder "$STAGE" \
 	-ov -format UDZO \
 	"$DMG" >/dev/null

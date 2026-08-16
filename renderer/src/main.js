@@ -58,7 +58,9 @@ function resolveLocal(href) {
 // images next to the document load without granting file:// access.
 const fileURL = (absPath) => `margin://file${absPath.split('/').map(encodeURIComponent).join('/')}`
 
-const isExternal = (href) => /^[a-z][a-z0-9+.-]*:/i.test(href) && !href.startsWith('imark:')
+// Anything already carrying a scheme, `margin:` included — a href that names a
+// scheme is not a path beside the document, so it is never rewritten into one.
+const isExternal = (href) => /^[a-z][a-z0-9+.-]*:/i.test(href)
 
 /* ----------------------------------------------------------------- parser */
 
@@ -1650,6 +1652,10 @@ document.addEventListener('click', (event) => {
   if (href.startsWith('margin://file')) {
     const path = decodeURIComponent(href.replace('margin://file', ''))
     bridge({ type: 'openLocal', path })
+  } else if (href.startsWith('margin:')) {
+    // The app's own scheme, and not a file — the page's own resources. Handing
+    // one to the system opener would ask macOS to open a URL only this WebView
+    // can serve, so the click goes nowhere instead.
   } else if (isExternal(href)) {
     bridge({ type: 'openExternal', url: href })
   }

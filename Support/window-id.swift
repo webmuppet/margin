@@ -3,11 +3,15 @@ import Foundation
 
 // Prints the window id of the named app's largest on-screen window:
 //
-//   screencapture -x -o -l"$(swift Support/window-id.swift Imark)" shot.png
+//   screencapture -x -o -l"$(swift Support/window-id.swift Margin)" shot.png
 //
 // Use this rather than a plain screencapture — it photographs that one window
 // and nothing else that happens to be on the desktop.
-let target = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "Imark"
+//
+// The name is the one the window server knows, which is CFBundleName — so it is
+// "Margin", or "Margin Dev" for a `./build.sh --debug` build, never the SwiftPM
+// target name.
+let target = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "Margin"
 let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
     as? [[String: Any]] ?? []
 

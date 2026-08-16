@@ -9,4 +9,4 @@ Report it privately through GitHub's [security advisories][advisory].
 You will get an answer. This is a small project, so expect a person rather than
 a process.
 
-[advisory]: https://github.com/migsilva89/imark/security/advisories/new
+[advisory]: https://github.com/webmuppet/margin/security/advisories/new

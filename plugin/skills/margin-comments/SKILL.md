@@ -74,6 +74,6 @@ Writing a block by hand from an agent gets none of that. Put your own answers in
 your reply, or in a separate document.
 
 If a note must be written into a file anyway, match `format()` in
-`Sources/Margin/Comments.swift` exactly: attributes in the order `quote`, `by`,
+`Sources/Imark/Comments.swift` exactly: attributes in the order `quote`, `by`,
 `at`, `nth`, `color`, a blank line between the note and the block above it, and
 the body escaped as described.

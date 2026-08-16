@@ -23,8 +23,16 @@ Neither checks the other's half.
 
 ## Things that are not what they look like
 
-**The folder is still `~/Sites/imark`.** The app, the repo and the bundle id are
-all Margin; the directory was not renamed. Nothing depends on it.
+**The SwiftPM targets are still `Imark`, `ImarkRender` and `ImarkQuickLook`.**
+`Sources/Imark/` is the app; `build.sh` renames the binary on its way into
+`Margin.app`, and every plist, bundle id and menu already says Margin. The
+target names are internal and staying, so a path in a doc that says
+`Sources/Margin/` is wrong rather than aspirational.
+
+Two AppKit identifiers are also stuck that way on purpose: the window's
+`setFrameAutosaveName("ImarkDocument")` and the toolbar's
+`"ImarkDocumentToolbar"` are keys in people's preferences. Renaming either one
+loses their saved window frames and toolbar layout.
 
 **`<!-- imark … -->` and `imark: review` are the file format, not branding.**
 They are written into people's documents. Renaming them would orphan every note

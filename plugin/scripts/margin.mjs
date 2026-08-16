@@ -3,7 +3,7 @@
 // markdown document, build a document for somebody to review, and block until
 // they have decided.
 //
-// The escaping here is the mirror image of Sources/Margin/Comments.swift. If one
+// The escaping here is the mirror image of Sources/Imark/Comments.swift. If one
 // side ever grows a rule the other must grow it too.
 
 import { spawnSync } from 'node:child_process'

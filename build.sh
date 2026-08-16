@@ -1,8 +1,8 @@
 #!/bin/bash
-# Builds Imark.app and installs it so Launch Services picks up the file
+# Builds Margin.app and installs it so Launch Services picks up the file
 # associations and the Quick Look extension.
 #
-#   ./build.sh            build + install to ~/Applications
+#   ./build.sh            build + install to /Applications
 #   ./build.sh --no-install   build into dist/ only
 #   ./build.sh --debug        debug configuration (faster compile)
 

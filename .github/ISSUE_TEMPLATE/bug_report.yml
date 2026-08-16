@@ -1,5 +1,5 @@
 name: Bug report
-description: Something Imark does that it should not
+description: Something Margin does that it should not
 labels: [bug]
 body:
   - type: textarea
@@ -11,8 +11,8 @@ body:
 
   - type: input
     attributes:
-      label: Imark version
-      description: Imark → About Imark. Or the name of the disk image you installed.
+      label: Margin version
+      description: Margin → About Margin. Or the name of the disk image you installed.
       placeholder: "0.2.1"
     validations:
       required: true

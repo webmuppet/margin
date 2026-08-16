@@ -1,13 +1,13 @@
 # Contributing
 
-Imark is one person's app. Issues get answered; pull requests are welcome but
+Margin is one person's app. Issues get answered; pull requests are welcome but
 please open an issue first, so nobody spends a weekend on something I was never
 going to merge.
 
 ## Bugs
 
 Anything that damages a document comes first. Everything else, use the [bug
-report form](https://github.com/migsilva89/imark/issues/new?template=bug_report.yml)
+report form](https://github.com/webmuppet/margin/issues/new?template=bug_report.yml)
 — the version and the macOS version save a round trip.
 
 ## Before a pull request
@@ -58,12 +58,12 @@ plugin/                  the Claude Code plugin — uses the app, is not part of
 
 The renderer is the only part that knows how to turn Markdown into anything. The
 Swift side handles windows, files and navigation, and talks to it in messages
-over a private `imark://` scheme, so images beside a document load without
+over a private `margin://` scheme, so images beside a document load without
 opening `file://` to the page. There is no `.xcodeproj`: Swift Package Manager
 compiles it and `build.sh` assembles the `.app`.
 
 `plugin/` is the single source for the agent files, copied into the app at build
-time. Editing the copy inside `Imark.app` changes nothing in the repo.
+time. Editing the copy inside `Margin.app` changes nothing in the repo.
 
 The app icon's source is `margin-app-icon.icon`, an Icon Composer document.
 Apple's own asset compiler turns it into the two things the bundle carries —
@@ -86,13 +86,13 @@ Two helpers exist for looking at the UI without photographing the whole desktop.
 one window:
 
 ```bash
-screencapture -x -o -l"$(swift Support/window-id.swift Imark)" shot.png
+screencapture -x -o -l"$(swift Support/window-id.swift Margin)" shot.png
 ```
 
 ## The review handshake: test the second round
 
 Everything about a review passes through `~/.margin/pending`, and that directory
-is the only state in Imark that outlives the thing that made it. A review that
+is the only state in Margin that outlives the thing that made it. A review that
 is never answered — the session closed, the process killed — leaves its request
 there, and 0.2.2 shipped an app that answered the leftover instead of the
 review the reviewer was looking at. The agent waited four hours for a decision
@@ -145,7 +145,7 @@ Two things it cannot tell you, both of which stay manual:
 
 ## What this is not
 
-- **Not a text editor.** Imark reads, and will let you fix what you are reading:
+- **Not a text editor.** Margin reads, and will let you fix what you are reading:
   a block at a time, through a control in the margin, with the whole document on
   the undo stack and a switch in Settings that turns it off. That is the whole of
   it. A cursor in the document, find-and-replace, anything that treats the file

@@ -1,17 +1,17 @@
 {
-  "name": "imark",
+  "name": "margin",
   "owner": {
-    "name": "migsilva89"
+    "name": "webmuppet"
   },
   "metadata": {
-    "description": "Review plans, diffs and documents in Imark, the offline macOS markdown reader.",
+    "description": "Review plans, diffs and documents in Margin, the offline macOS markdown reader that lets you fix what you are reading.",
     "version": "0.1.0"
   },
   "plugins": [
     {
-      "name": "imark",
+      "name": "margin",
       "source": "./plugin",
-      "description": "Review plans, diffs and documents in Imark. The agent writes markdown, you comment on it in the app, and your notes come back — through the file, with no server in between."
+      "description": "Review plans, diffs and documents in Margin. The agent writes markdown, you comment on it in the app, and your notes come back — through the file, with no server in between."
     }
   ]
 }

@@ -1,6 +1,6 @@
 import AppKit
 
-/// Once a day, ask GitHub whether a newer Imark exists, and say so — once.
+/// Once a day, ask GitHub whether a newer Margin exists, and say so — once.
 ///
 /// This is the one place the app touches the network, and it is deliberately
 /// the smallest possible touch: a GET of the latest release's metadata, no
@@ -14,10 +14,10 @@ import AppKit
 /// prevents.
 enum Updates {
     /// Where "Download" lands. The page, not the asset: release notes first.
-    static let page = URL(string: "https://github.com/migsilva89/imark/releases/latest")!
+    static let page = URL(string: "https://github.com/webmuppet/margin/releases/latest")!
 
     private static let api = URL(
-        string: "https://api.github.com/repos/migsilva89/imark/releases/latest"
+        string: "https://api.github.com/repos/webmuppet/margin/releases/latest"
     )!
 
     static var current: String {
