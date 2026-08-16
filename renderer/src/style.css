@@ -951,16 +951,56 @@ img[data-blocked] {
   font-family: var(--font-body);
   font-size: 15px;
   line-height: 1;
-  color: var(--bg);
-  background: var(--accent);
-  border: 0;
+  color: var(--secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
   opacity: 0.5;
-  transition: opacity 100ms ease;
+  transition: opacity 100ms ease, color 100ms ease,
+              background-color 100ms ease, border-color 100ms ease;
 }
 
-.block-plus:hover { opacity: 1; }
+/* The three margin controls — `+`, source, grip — resting and hovered, in one
+   rule because they are one set and the whole point is that they match. They
+   were written in three places and drifted: the `+` was a filled accent chip
+   while the other two were outlined and grey, so the set read as one button and
+   two of something else.
+
+   At rest all three are grey: a --secondary glyph in a --border outline, at
+   half strength, so the column reads as available rather than as three things
+   demanding attention beside every block you pass.
+
+   Under the pointer, the same soft purple that tints the block itself —
+   --accent at 20%, the mix .block-armed uses — so the control and the thing it
+   acts on are lit in one colour rather than two. The border takes that colour
+   too, which is what retires the grey ring without removing the border: the box
+   is still 1px larger than its content in both states, so nothing shifts. The
+   glyph goes to full accent, because 20% of it is invisible at 13px and because
+   the pair then reads as one object — a tinted chip with a solid mark in it.
+
+   Nothing moves — same 22px, same 1px border in both states — because these
+   follow the pointer down the page, and a control that changes shape as it
+   passes under the cursor reads as a flicker.
+
+   :focus alongside :focus-visible is deliberate. :focus-visible alone is the
+   tidier rule, but it is a judgement the engine makes about how the element was
+   focused, and a control that gives no sign it is focused is too much to hang
+   on it. */
+.block-plus:hover,
+.block-plus:focus,
+.block-plus:focus-visible,
+.source-toggle:hover,
+.source-toggle:focus,
+.source-toggle:focus-visible,
+.block-grip:hover,
+.block-grip:focus,
+.block-grip:focus-visible {
+  opacity: 1;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 20%, transparent);
+}
 
 /* Belt and braces with the guard in the mousemove handler: the preview panel
    has nothing to write to, and a `+` there is a promise the panel cannot keep. */
@@ -1286,22 +1326,15 @@ img[data-blocked] {
   border: 1px solid var(--border);
   border-radius: 6px;
   opacity: 0.5;
-  transition: opacity 100ms ease;
+  transition: opacity 100ms ease, color 100ms ease,
+              background-color 100ms ease, border-color 100ms ease;
   cursor: pointer;
 }
 
 .source-toggle svg { width: 13px; height: 13px; display: block; pointer-events: none; }
 
-/* Full strength under the pointer and when tabbed to. Both :focus and
-   :focus-visible, deliberately: :focus-visible alone is the tidier rule, but it
-   is a judgement the engine makes about how the element was focused, and a
-   control that vanishes entirely is too much to hang on it. */
-.source-toggle:hover,
-.source-toggle:focus,
-.source-toggle:focus-visible {
-  opacity: 1;
-  color: var(--text);
-}
+/* Hover and focus are with the `+`, up by .block-plus — one rule for all three
+   margin controls, so they cannot drift apart again. */
 
 
 /* Hidden with display, not the `hidden` attribute. `hidden` is the lowest
@@ -1464,12 +1497,14 @@ img[data-blocked] {
   border: 1px solid var(--border);
   border-radius: 6px;
   opacity: 0.5;
-  transition: opacity 100ms ease;
+  transition: opacity 100ms ease, color 100ms ease,
+              background-color 100ms ease, border-color 100ms ease;
   cursor: grab;
 }
 
 .block-grip svg { width: 14px; height: 14px; display: block; pointer-events: none; }
-.block-grip:hover, .block-grip:focus, .block-grip:focus-visible { opacity: 1; color: var(--text); }
+/* Hover and focus are with the `+`, up by .block-plus — one rule for all three
+   margin controls, so they cannot drift apart again. */
 .block-grip:active { cursor: grabbing; }
 
 /* Where it would land. A line rather than a highlight: what is being chosen is
