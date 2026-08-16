@@ -1480,7 +1480,7 @@ img[data-blocked] {
   border-right: 0;
 }
 
-/* The grip, under the `+`. Only this is draggable — a draggable block would
+/* The grip, above the `+`. Only this is draggable — a draggable block would
    take every drag that starts inside it, and a drag inside a paragraph is
    somebody selecting the words they want to comment on. */
 .block-grip {

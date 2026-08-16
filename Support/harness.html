@@ -66,9 +66,15 @@
       <ol>
         <li>Hover each block in turn — paragraph, heading, <strong>table</strong>, list,
             blockquote, code. All three controls appear together in <strong>one
-            column</strong>, in order — <code>+</code>, <code>&lt;/&gt;</code>, grip —
-            with their left edges flush. A table is the one that has been broken
-            before, and a list item is the one that drifts.</li>
+            column</strong>, with their left edges flush — grip, then <code>+</code>,
+            then <code>&lt;/&gt;</code>, with the <code>+</code> on the block's own
+            top line and the other two straddling it. A table is the one that has
+            been broken before, and a list item is the one that drifts.</li>
+        <li><strong>Grab the grip on a one-line paragraph.</strong> It has to be
+            reachable without the column jumping to another block on the way. The
+            grip used to sit 74px below the block's top, which on a short block is
+            inside the next one — moving towards it re-anchored the whole column
+            there and took the grip with it.</li>
         <li>Open a block, change it, press <code>⌘↵</code>. The document below re-renders
             from the edited text, the way it does when Swift writes the file.</li>
         <li><strong>Then hover another block.</strong> The control has to still be there.

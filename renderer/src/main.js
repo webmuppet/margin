@@ -1358,12 +1358,21 @@ const editorIsOpen = () => !!content().querySelector('.source-box')
 /// `+` keeps the 34 it has always had; source sits outside it. Both are clamped
 /// so a narrow window pushes them into the gutter rather than off the page.
 /// Where the margin controls sit: one column, out from the block's left edge,
-/// stacked in the order you meet them — comment, then source, then move.
+/// with the `+` on the block's own top line and the other two either side of it
+/// — grip above, source below.
 ///
 /// One column rather than a row and a stack. The source control used to sit
 /// outside the `+` and the grip under it, which put two of the three on one
 /// line and the third below, and read as a control that had come loose rather
 /// than a set of three.
+///
+/// The `+` anchors the column and the other two straddle it, because a column
+/// that only grew downward put the grip 74px below the block's top — past the
+/// bottom of any short block, and often inside the next one. Reaching for it
+/// moved the pointer over that next block, showPlus() re-anchored everything
+/// there, and the grip you were aiming at left with it. A one-line paragraph is
+/// the common case, so the control that moves blocks was the one you could not
+/// catch on most of the document.
 const PLUS_OFFSET = 34
 /// Each control is 22 tall; this is that plus the gap between them.
 const STACK_STEP = 26
@@ -1407,7 +1416,7 @@ function showPlus(block) {
 
   if (!gripButton) return
   gripButton.style.display = editable ? 'flex' : 'none'
-  gripButton.style.top = `${rect.top + 1 + STACK_STEP * 2}px`
+  gripButton.style.top = `${rect.top + 1 - STACK_STEP}px`
   gripButton.style.left = column
 }
 
