@@ -77,9 +77,16 @@ enum Menu {
 
     private static func fileMenu() -> NSMenu {
         let menu = NSMenu(title: "File")
+        menu.addItem(withTitle: "New…", action: #selector(AppDelegate.newDocument(_:)), keyEquivalent: "n")
         menu.addItem(withTitle: "Open…", action: #selector(AppDelegate.openDocument(_:)), keyEquivalent: "o")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        // Save is the block you are editing; everything else in this app writes
+        // itself the moment it is committed, so the item is greyed until a
+        // block is open as markdown. Save As is a copy under a new name.
+        menu.addItem(withTitle: "Save", action: #selector(DocumentWindowController.saveDocument(_:)), keyEquivalent: "s")
+        let saveAs = menu.addItem(withTitle: "Save As…", action: #selector(DocumentWindowController.saveDocumentAs(_:)), keyEquivalent: "s")
+        saveAs.keyEquivalentModifierMask = [.command, .shift]
         menu.addItem(.separator())
         let reveal = menu.addItem(withTitle: "Reveal in Finder", action: #selector(DocumentWindowController.revealInFinder(_:)), keyEquivalent: "r")
         reveal.keyEquivalentModifierMask = [.command, .shift]

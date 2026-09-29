@@ -59,6 +59,13 @@ final class WelcomeWindowController: NSWindowController {
         openButton.bezelStyle = .rounded
         openButton.keyEquivalent = "\r"
 
+        let newButton = NSButton(title: "New…", target: NSApp.delegate, action: #selector(AppDelegate.newDocument(_:)))
+        newButton.bezelStyle = .rounded
+
+        let buttons = NSStackView(views: [newButton, openButton])
+        buttons.orientation = .horizontal
+        buttons.spacing = 8
+
         defaultRow.orientation = .horizontal
         defaultRow.spacing = 5
         defaultRow.alignment = .centerY
@@ -69,13 +76,13 @@ final class WelcomeWindowController: NSWindowController {
         agentRow.alignment = .centerY
         refreshAgentRow()
 
-        let stack = NSStackView(views: [icon, title, subtitle, openButton, defaultRow, agentRow])
+        let stack = NSStackView(views: [icon, title, subtitle, buttons, defaultRow, agentRow])
         stack.orientation = .vertical
         stack.alignment = .centerX
         stack.spacing = 10
         stack.setCustomSpacing(14, after: icon)
         stack.setCustomSpacing(26, after: subtitle)
-        stack.setCustomSpacing(22, after: openButton)
+        stack.setCustomSpacing(22, after: buttons)
         stack.setCustomSpacing(16, after: defaultRow)
 
         stack.translatesAutoresizingMaskIntoConstraints = false

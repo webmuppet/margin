@@ -1,6 +1,6 @@
 import AppKit
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // Keyed by nothing on purpose: a window's document changes as you follow
     // links, so identity has to be asked for rather than remembered.
     private var controllers: [DocumentWindowController] = []
@@ -139,6 +139,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func showShortcuts(_ sender: Any?) { ShortcutsPanel.toggle() }
 
     @objc func showSettings(_ sender: Any?) { PreferencesWindowController.show() }
+
+    /// A new file starts with the panel, not with an untitled window: the file
+    /// on disk is the document here, and every edit writes straight into it,
+    /// so there is nothing for a window to hold before the file exists.
+    @objc func newDocument(_ sender: Any?) {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = MarkdownType.contentTypes
+        panel.nameFieldStringValue = "Untitled.md"
+        panel.directoryURL = (NSApp.keyWindow?.windowController as? DocumentWindowController)?
+            .url.deletingLastPathComponent()
+        guard panel.runModal() == .OK, let target = panel.url else { return }
+        do {
+            try Self.createDocument(at: target)
+            open(target)
+        } catch {
+            let alert = NSAlert(error: error)
+            alert.messageText = "Couldn't create that file"
+            alert.runModal()
+        }
+    }
+
+    /// One heading, named after the file. An empty document renders as a
+    /// notice with no blocks in it, and the only way to edit is through a
+    /// block's margin control — so an empty new file would be one with no way
+    /// to type into it.
+    static func createDocument(at url: URL) throws {
+        try "# \(url.deletingPathExtension().lastPathComponent)\n"
+            .write(to: url, atomically: true, encoding: .utf8)
+    }
 
     @objc func openDocument(_ sender: Any?) {
         let panel = NSOpenPanel()

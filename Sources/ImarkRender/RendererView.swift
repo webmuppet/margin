@@ -215,6 +215,8 @@ public final class RendererView: NSView {
     /// mean the last keystroke rather than the last change to the document.
     public func undoInEditor() { call("window.imark.undoInEditor", []) }
     public func redoInEditor() { call("window.imark.redoInEditor", []) }
+    /// Commits the open source editor, for ⌘S meaning what ⌘↵ means in it.
+    public func saveInEditor() { call("window.imark.saveInEditor", []) }
 
     public func find(_ query: String) {
         call("window.imark.find", query)

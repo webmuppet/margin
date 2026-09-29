@@ -220,6 +220,34 @@ results.noPlusInPreview = document.querySelector('.block-plus').style.display ==
 results.notesStillShowInPreview = document.querySelectorAll('.note-anchor').length > 0
 window.imark.setPreview(false)
 
+// 9. ⌘S. The menu matches the key before the page sees it, so Swift asks the
+//    page to commit the open editor; what has to be true is that the ask lands
+//    on the editor that is open, and that it goes away with a re-render.
+window.imark.setEditing(true)
+await window.imark.render({
+  markdown: '# Heading\\n\\nA paragraph to edit.\\n',
+  path: '/tmp/t.md',
+  theme: 'dark',
+})
+await sleep(300)
+results.saveWithNoEditorIsRefused = window.imark.saveInEditor() === false
+const editRoot = document.getElementById('content')
+const editPara = [...editRoot.children].find((el) => el.tagName === 'P')
+const editBox = editPara.getBoundingClientRect()
+move(editPara, editBox.left + 40, editBox.top + 5)
+await sleep(30)
+document.querySelector('.source-toggle').click()
+await sleep(30)
+const area = document.querySelector('.source-text')
+results.editorOpened = !!area
+area.value = 'A paragraph, corrected.'
+const before = sent.filter((m) => m.type === 'editSource').length
+results.saveInEditorCommits = window.imark.saveInEditor() === true
+const edit = sent.filter((m) => m.type === 'editSource').pop()
+results.saveSentTheEdit = sent.filter((m) => m.type === 'editSource').length === before + 1
+  && edit?.text === 'A paragraph, corrected.'
+window.imark.setEditing(false)
+
 return JSON.stringify(results)
 """
 

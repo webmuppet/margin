@@ -57,7 +57,7 @@ have come from this.
 ## Verify at the point of use, not the point of definition
 
 This is the one that has cost the most time, and it has failed in the same shape
-four times:
+five times:
 
 - an element with the right rectangle, `opacity: 1` and `visibility: visible`,
   that is **never painted** — a `position: absolute` child of a `<table>`
@@ -67,6 +67,9 @@ four times:
   because the Finder composites its own render and caches it
 - a dispatched `element.click()` passing on a control that could not be
   clicked, because a synthetic event needs no hit-testing
+- a `validateMenuItem(_:)` that compiled, read correctly and **was never
+  called** — Swift only exposes it to AppKit when the class declares
+  `NSMenuItemValidation`, and without that every item is simply enabled
 
 Measure the output. `NSWorkspace.icon(forFile:)` for what the Finder draws,
 `NSApp.target(forAction:)` for where a menu item lands, a real pointer for

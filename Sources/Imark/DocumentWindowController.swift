@@ -1,7 +1,7 @@
 import AppKit
 import ImarkRender
 
-final class DocumentWindowController: NSWindowController, NSWindowDelegate {
+final class DocumentWindowController: NSWindowController, NSWindowDelegate, NSMenuItemValidation {
     private(set) var url: URL
     var onClose: (() -> Void)?
 
@@ -638,16 +638,26 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
 
     /// Greys the comment commands out in a document with no notes, and ticks
     /// the toggle when review mode is on.
+    ///
+    /// Only reached because the class declares `NSMenuItemValidation`. Without
+    /// that, Swift never exposes this method to Objective-C, AppKit never asks,
+    /// and every item is enabled the moment something answers its action —
+    /// which is how every case below passed unnoticed: nothing was greyed,
+    /// and nothing said so.
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         switch item.action {
         case #selector(undoComment(_:)):
             // Named after what it will actually put back, so the menu never
-            // offers a vague "Undo" that might mean something else.
+            // offers a vague "Undo" that might mean something else. Still
+            // enabled while a block is open as markdown: ⌘Z then means the
+            // last keystroke, which the document stack knows nothing about.
             item.title = undoStack.last.map { "Undo \($0.what)" } ?? "Undo"
-            return !undoStack.isEmpty
+            return editorHasKeyboard || !undoStack.isEmpty
         case #selector(toggleAllComments(_:)):
             item.state = reviewingComments ? .on : .off
             return noteCount > 0
+        case #selector(saveDocument(_:)):
+            return editorHasKeyboard
         case #selector(chooseWidth(_:)):
             item.state = (item.representedObject as? String) == Settings.width.rawValue ? .on : .off
             return true
@@ -722,6 +732,42 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
                 }
             }
         }
+    }
+
+    /// ⌘S. Only a block open as markdown has anything unsaved: every other
+    /// change writes itself when it is committed. The menu item is greyed the
+    /// rest of the time, which is the honest answer to "is this saved?".
+    @objc func saveDocument(_ sender: Any?) {
+        editorHasKeyboard ? content.renderer.saveInEditor() : NSSound.beep()
+    }
+
+    /// ⇧⌘S. The file as it is on disk, byte for byte, under the new name, and
+    /// the window then shows the copy. Undo is not carried across: each entry
+    /// on the stack names the file it belongs to, so ⌘Z afterwards puts the
+    /// original back, exactly as it does after following a link.
+    @objc func saveDocumentAs(_ sender: Any?) {
+        guard let window else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = MarkdownType.contentTypes
+        panel.nameFieldStringValue = url.lastPathComponent
+        panel.directoryURL = url.deletingLastPathComponent()
+        panel.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .OK, let target = panel.url else { return }
+            do {
+                try self.saveCopy(to: target)
+            } catch {
+                self.report(error, doing: "save a copy")
+            }
+        }
+    }
+
+    /// Reachable from Support/test-undo.swift, which checks that undo after
+    /// this still goes back to the original file.
+    func saveCopy(to target: URL) throws {
+        guard target != url else { return }
+        try Data(contentsOf: url).write(to: target, options: .atomic)
+        NSDocumentController.shared.noteNewRecentDocumentURL(target)
+        show(target, pushingHistory: false)
     }
 
     @objc func revealInFinder(_ sender: Any?) {

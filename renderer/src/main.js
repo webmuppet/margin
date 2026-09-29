@@ -1843,6 +1843,11 @@ window.imark = {
     area.focus()
     return document.execCommand('redo')
   },
+  /// ⌘S while a block is open as markdown: the same as ⌘↵ inside it.
+  saveInEditor() {
+    const area = document.querySelector('.source-text')
+    return area?.commitSource ? area.commitSource() : false
+  },
   sourceOf: (segment) => textOf(lastSource, segment),
   exportComments: () => toVisibleText(lastSource),
   /// Opens the note that was just written, so a comment lands visibly rather

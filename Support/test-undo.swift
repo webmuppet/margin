@@ -81,6 +81,7 @@ struct TestUndo {
             try aSourceEditUndoesToo()
             try aMessageIsNotADocument()
             try undoKnowsWhereTheKeyboardIs()
+            try aCopyIsNotTheSameFile()
         } catch {
             failures += 1
             print("FAIL threw: \(error)")
@@ -370,6 +371,39 @@ struct TestUndo {
         window.undoComment(nil)
         spin(0.6)
         check("and it put the document back", read(url) == before, String(read(url).prefix(40)))
+
+        window.close()
+    }
+
+    /// Save As shows the copy in the window that made it, and the stack still
+    /// names the original. Undo has to follow the name: going back over the
+    /// copy would leave the edit in the original and take it out of the file
+    /// somebody just chose to keep it in.
+    static func aCopyIsNotTheSameFile() throws {
+        print("\n▸ edit a block, save a copy under a new name, press undo")
+
+        let a = fixture("# A\n\nThe first document.\n", named: "A3.md")
+        let aBefore = read(a)
+        let b = a.deletingLastPathComponent().appendingPathComponent("B3.md")
+
+        let window = DocumentWindowController(url: a)
+        window.window?.setFrameOrigin(NSPoint(x: -6_000, y: 0))
+        window.showWindow(nil)
+        spin(0.8)
+
+        window.commitSource(SourceEdit(lines: 2..<3, text: "The first document, corrected."))
+        spin(0.6)
+        try window.saveCopy(to: b)
+        spin(0.6)
+
+        check("the window now shows the copy", window.url == b, window.url.path)
+        check("and the copy carries the edit", read(b).contains("corrected"), read(b))
+
+        window.undoComment(nil)
+        spin(0.6)
+
+        check("the copy is untouched", read(b).contains("corrected"), read(b))
+        check("and the original is back to before the edit", read(a) == aBefore, String(read(a).prefix(60)))
 
         window.close()
     }

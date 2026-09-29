@@ -223,6 +223,11 @@ export function openSourceEditor({
     if (save()) close()
   })
 
+  // ⌘S arrives as a menu action from Swift rather than as a key event. Hung
+  // on the element, not the module, so a re-render that takes the editor
+  // with it takes this too — a module variable would outlive the box.
+  area.commitSource = save
+
   area.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       event.preventDefault()
