@@ -658,6 +658,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, NSMe
             return noteCount > 0
         case #selector(saveDocument(_:)):
             return editorHasKeyboard
+        case #selector(paste(_:)), #selector(pasteAsPlainText(_:)):
+            return showingRealDocument && NSPasteboard.general.string(forType: .string) != nil
         case #selector(chooseWidth(_:)):
             item.state = (item.representedObject as? String) == Settings.width.rawValue ? .on : .off
             return true
@@ -740,6 +742,18 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, NSMe
     @objc func saveDocument(_ sender: Any?) {
         editorHasKeyboard ? content.renderer.saveInEditor() : NSSound.beep()
     }
+
+    /// ⌘V with no block open. The page's web view stands aside for Paste
+    /// unless its editor has the keyboard, so this is only reached outside it,
+    /// and the page decides where the text goes and whether it is safe.
+    @objc func paste(_ sender: Any?) {
+        guard showingRealDocument, let text = NSPasteboard.general.string(forType: .string)
+        else { return NSSound.beep() }
+        content.renderer.pasteAtEnd(text)
+    }
+
+    /// Markdown is plain text already; the same as Paste.
+    @objc func pasteAsPlainText(_ sender: Any?) { paste(sender) }
 
     /// ⇧⌘S. The file as it is on disk, byte for byte, under the new name, and
     /// the window then shows the copy. Undo is not carried across: each entry

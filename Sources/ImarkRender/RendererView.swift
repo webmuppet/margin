@@ -94,7 +94,7 @@ public struct TocEntry: Identifiable, Equatable {
 }
 
 public final class RendererView: NSView {
-    private let webView: WKWebView
+    private let webView: PageView
     private var isReady = false
     private var pending: (markdown: String, path: String)?
 
@@ -120,7 +120,7 @@ public final class RendererView: NSView {
         // has to be installed before the web view exists.
         config.userContentController.add(bridge, name: "imark")
 
-        webView = WKWebView(frame: .zero, configuration: config)
+        webView = PageView(frame: .zero, configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
         webView.allowsBackForwardNavigationGestures = false
 
@@ -143,6 +143,25 @@ public final class RendererView: NSView {
 
     @available(*, unavailable)
     public required init?(coder: NSCoder) { fatalError("not supported") }
+
+    /// A web view that only answers Paste while the block editor has the
+    /// keyboard. WKWebView answers `paste:` always and greys it out whenever
+    /// nothing editable is focused, and as the first responder it is the
+    /// target the menu finds — so outside an editor ⌘V reached nothing, and a
+    /// new file, which is one heading, had no way to paste into it. Declining
+    /// the selector lets the responder chain carry it on to the window.
+    final class PageView: WKWebView {
+        var editorHasKeyboard = false
+
+        override func responds(to selector: Selector!) -> Bool {
+            if !editorHasKeyboard,
+               selector == #selector(NSText.paste(_:))
+                || selector == #selector(NSTextView.pasteAsPlainText(_:)) {
+                return false
+            }
+            return super.responds(to: selector)
+        }
+    }
 
     // MARK: - Driving the page
 
@@ -217,6 +236,8 @@ public final class RendererView: NSView {
     public func redoInEditor() { call("window.imark.redoInEditor", []) }
     /// Commits the open source editor, for ⌘S meaning what ⌘↵ means in it.
     public func saveInEditor() { call("window.imark.saveInEditor", []) }
+    /// ⌘V with no block open: the text goes on the end of the document.
+    public func pasteAtEnd(_ text: String) { call("window.imark.pasteAtEnd", text) }
 
     public func find(_ query: String) {
         call("window.imark.find", query)
@@ -451,7 +472,9 @@ public final class RendererView: NSView {
                 }
 
             case "editorFocus":
-                owner.onMessage?(.editorFocus(body["focused"] as? Bool ?? false))
+                let focused = body["focused"] as? Bool ?? false
+                owner.webView.editorHasKeyboard = focused
+                owner.onMessage?(.editorFocus(focused))
 
             case "wikilinks":
                 owner.onMessage?(.wikilinks(body["targets"] as? [String] ?? []))

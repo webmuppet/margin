@@ -23,6 +23,7 @@
 // wrongly is still a lost document.
 
 import AppKit
+import WebKit
 
 @main
 struct TestUndo {
@@ -82,6 +83,7 @@ struct TestUndo {
             try aMessageIsNotADocument()
             try undoKnowsWhereTheKeyboardIs()
             try aCopyIsNotTheSameFile()
+            try pasteReachesANewFile()
         } catch {
             failures += 1
             print("FAIL threw: \(error)")
@@ -404,6 +406,61 @@ struct TestUndo {
 
         check("the copy is untouched", read(b).contains("corrected"), read(b))
         check("and the original is back to before the edit", read(a) == aBefore, String(read(a).prefix(60)))
+
+        window.close()
+    }
+
+    /// ⌘V in a window with no block open. A new file is one heading and
+    /// nothing editable, and WKWebView answered `paste:` anyway — greyed out —
+    /// so as first responder it was where the menu stopped and the paste went
+    /// nowhere. Asked of AppKit rather than of the method: where the menu's
+    /// own item lands, whether the menu enables it, and what the file says
+    /// after it is sent.
+    static func pasteReachesANewFile() throws {
+        print("\n▸ Cmd-V in a new file with no block open")
+
+        let url = fixture("# New\n", named: "New.md")
+        let window = DocumentWindowController(url: url)
+        window.window?.setFrameOrigin(NSPoint(x: -6_000, y: 0))
+        window.showWindow(nil)
+        window.window?.makeKeyAndOrderFront(nil)
+        spin(0.8)
+
+        func webView(in view: NSView?) -> NSView? {
+            guard let view else { return nil }
+            if view is WKWebView { return view }
+            return view.subviews.lazy.compactMap { webView(in: $0) }.first
+        }
+        let page = webView(in: window.window?.contentView)
+        window.window?.makeFirstResponder(page)
+        check("the page has the keyboard", page != nil && window.window?.firstResponder === page)
+
+        // The clipboard is the person's running this, so it goes back after.
+        let board = NSPasteboard.general
+        let saved = board.string(forType: .string)
+        board.clearContents()
+        board.setString("Pasted paragraph.\r\n\r\n- one\n- two\n\n", forType: .string)
+        defer {
+            board.clearContents()
+            if let saved { board.setString(saved, forType: .string) }
+        }
+
+        let item = NSApp.mainMenu?.items
+            .first(where: { $0.submenu?.title == "Edit" })?.submenu?
+            .items.first(where: { $0.title == "Paste" })
+        // No key window under `.prohibited`, so NSApp.target(forAction:) has no
+        // chain to start from. The same walk from the first responder instead:
+        // the first object that says it responds is the one that gets it.
+        let paste = #selector(NSText.paste(_:))
+        let answers = sequence(first: window.window?.firstResponder) { $0?.nextResponder }
+            .lazy.compactMap { $0 }.first { $0.responds(to: paste) }
+        check("Paste reaches the window, not the page", answers === window,
+              String(describing: answers.map { type(of: $0) }))
+        check("and the menu enables it", item.map { window.validateMenuItem($0) } == true)
+        // Where the text lands is the page's half, and this binary runs with no
+        // renderer beside it — SchemeHandler finds no index.html, so the page
+        // never loads. Copied next to Resources/ it does, and the file then
+        // reads "# New\n\nPasted paragraph.\n\n- one\n- two\n".
 
         window.close()
     }

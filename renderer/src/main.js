@@ -1848,6 +1848,21 @@ window.imark = {
     const area = document.querySelector('.source-text')
     return area?.commitSource ? area.commitSource() : false
   },
+  /// ⌘V with no block open, which Swift only sends when nothing editable has
+  /// the keyboard. The text goes after the last block with one blank line
+  /// between, through the same check a typed edit gets, so a pasted marker
+  /// that breaks a note is refused rather than written.
+  pasteAtEnd(text) {
+    if (!editingAllowed() || editorIsOpen()) return NSSoundBeep()
+    const pasted = text.replace(/\r\n?/g, '\n').replace(/\s+$/, '')
+    if (!pasted.trim()) return NSSoundBeep()
+    const lines = lastSource.split('\n')
+    let end = lines.length
+    while (end > 0 && !lines[end - 1].trim()) end -= 1
+    const segment = { kind: 'content', from: end, to: lines.length }
+    const verdict = commitSource(segment, `${end > 0 ? '\n' : ''}${pasted}\n`)
+    if (!verdict.ok) reportRefusal(verdict.reason)
+  },
   sourceOf: (segment) => textOf(lastSource, segment),
   exportComments: () => toVisibleText(lastSource),
   /// Opens the note that was just written, so a comment lands visibly rather
