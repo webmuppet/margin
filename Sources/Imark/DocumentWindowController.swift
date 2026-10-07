@@ -35,6 +35,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, NSMe
     /// cheapest way to put a real change on the undo stack from a test.
     var composingFileNote = false
     private(set) var reviewingComments = false
+    /// Showing the file as text rather than rendered. Per window, and kept
+    /// across navigation, the way the comments switch is.
+    private(set) var showingCode = false
     /// Whether what the page is showing came out of the file whole. False while
     /// a document is unreadable, gone, or too big to show all of — the three
     /// times the page holds something Imark wrote, which must never be written
@@ -658,6 +661,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, NSMe
             return noteCount > 0
         case #selector(saveDocument(_:)):
             return editorHasKeyboard
+        case #selector(toggleCodeView(_:)):
+            item.title = showingCode ? "Show Rendered Document" : "Show Markdown Source"
+            return true
         case #selector(paste(_:)), #selector(pasteAsPlainText(_:)):
             return showingRealDocument && NSPasteboard.general.string(forType: .string) != nil
         case #selector(chooseWidth(_:)):
@@ -669,6 +675,14 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, NSMe
         default:
             return true
         }
+    }
+
+    /// ⌥⌘U, and the toolbar's code button. Read-only: edits still go through
+    /// a block, where the renderer can check them.
+    @objc func toggleCodeView(_ sender: Any?) {
+        showingCode.toggle()
+        content.renderer.setCodeView(showingCode)
+        refreshCodeButton()
     }
 
     @objc func findNext(_ sender: Any?) { content.findNext() }

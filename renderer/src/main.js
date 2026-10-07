@@ -764,6 +764,12 @@ function addCopyButtons(root) {
 /* ---------------------------------------------------------------- render */
 
 const content = () => document.getElementById('content')
+/// The file as text, for the code view. Filled on every render, shown only
+/// while `data-view="code"` is set on the root. Made here rather than in
+/// index.html so the harness, which has a page of its own, gets one too.
+const sourceView = () => document.getElementById('source-view')
+  ?? document.body.appendChild(Object.assign(document.createElement('pre'), { id: 'source-view' }))
+const inCodeView = () => document.documentElement.dataset.view === 'code'
 
 let activeHeadings = []
 let renderToken = 0
@@ -777,6 +783,7 @@ let lastComments = []
 async function render({ markdown, path, theme, preview, rail }) {
   const token = ++renderToken
   lastSource = markdown ?? ''
+  sourceView().textContent = lastSource
   docDir = path ? path.slice(0, path.lastIndexOf('/')) || '/' : '/'
   slugCounts.clear()
 
@@ -940,6 +947,7 @@ let lastSegments = []
 const editingAllowed = () =>
   document.documentElement.dataset.editing !== 'false'
   && document.documentElement.dataset.preview !== 'true'
+  && !inCodeView()
 
 /// The piece a point on screen belongs to.
 ///
@@ -1589,7 +1597,7 @@ function setUpBlockPlus() {
     // The Quick Look panel renders with the same bundle and cannot write to
     // anything. Existing notes still show — that is reading — but offering a
     // way to add one there is offering something that cannot happen.
-    if (document.documentElement.dataset.preview === 'true') return hidePlus()
+    if (document.documentElement.dataset.preview === 'true' || inCodeView()) return hidePlus()
     if (event.target === plusButton || sourceButton?.contains(event.target)
         || gripButton?.contains(event.target)) return cancelHide()
     // Kept because the block under the pointer is not always one piece: a list
@@ -1626,7 +1634,9 @@ document.addEventListener('selectionchange', () => {
   // Debounced: a drag fires this on every pixel, and the popover should appear
   // when the hand stops, not chase it across the paragraph.
   selectionTimer = setTimeout(() => {
-    const info = selectionInfo()
+    // The code view is for selecting and copying the source; a comment needs
+    // the rendered block a selection sits in, and there is none here.
+    const info = inCodeView() ? null : selectionInfo()
     if (info) {
       hadSelection = true
       bridge(info)
@@ -1697,7 +1707,7 @@ function runFind(query) {
   const needle = (query ?? '').toLowerCase()
   if (needle.length === 0) return report()
 
-  const root = content()
+  const root = inCodeView() ? sourceView() : content()
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT
@@ -1768,6 +1778,19 @@ window.imark = {
   },
   setPreview(on) {
     document.documentElement.dataset.preview = on ? 'true' : 'false'
+  },
+  /// The rendered document, or the file as plain text. Everything else on the
+  /// page is hidden in code view, so Select All takes the whole file and only
+  /// the file.
+  setCodeView(on) {
+    if (on === inCodeView()) return
+    clearFind()
+    report()
+    clearBlockTarget()
+    window.getSelection()?.removeAllRanges()
+    if (on) document.documentElement.dataset.view = 'code'
+    else delete document.documentElement.dataset.view
+    window.scrollTo(0, 0)
   },
   /// Whether the document may be changed in place. Turning it off closes
   /// anything already open: leaving an editor on screen that can no longer

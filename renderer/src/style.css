@@ -1540,3 +1540,29 @@ img[data-blocked] {
 
 :root[data-editing='false'] .block-grip { display: none !important; }
 :root[data-preview='true'] .block-grip { display: none !important; }
+
+/* Code view: the file as text. Everything else on the page goes, the rails and
+   margin controls included, so Select All selects the source and nothing else. */
+#source-view {
+  display: none;
+}
+
+:root[data-view='code'] body > :not(#source-view) {
+  display: none !important;
+}
+
+:root[data-view='code'] #source-view {
+  display: block;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: calc(var(--top-inset, 0px) + 32px) 32px 64px;
+  font: calc(var(--size-body) * 0.875) / 1.6 var(--font-mono);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  user-select: text;
+  -webkit-user-select: text;
+}

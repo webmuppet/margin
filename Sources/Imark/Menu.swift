@@ -169,6 +169,12 @@ enum Menu {
         menu.addItem(withTitle: "Forward", action: #selector(DocumentWindowController.goForward(_:)), keyEquivalent: "]")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Reload", action: #selector(DocumentWindowController.reloadDocument(_:)), keyEquivalent: "r")
+        let code = menu.addItem(
+            withTitle: "Show Markdown Source",
+            action: #selector(DocumentWindowController.toggleCodeView(_:)),
+            keyEquivalent: "u"
+        )
+        code.keyEquivalentModifierMask = [.command, .option]
         menu.addItem(.separator())
 
         let allComments = menu.addItem(

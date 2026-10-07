@@ -255,6 +255,7 @@ commands.
 | `⌘W` | Close window | `⌘G` / `⌘⇧G` | Next / previous hit |
 | `⌘\` | Toggle sidebar | `←` / `→` | Fold / unfold outline section |
 | `⌘[` / `⌘]` | Back / forward | `⌘R` | Reload |
+| `⌥⌘U` | Markdown source / rendered document | | |
 | `⌘+` / `⌘-` / `⌘0` | Text size | `⌘⇧R` | Reveal in Finder |
 | `⌘P` | Print or export PDF | `⌘⇧C` | Show all comments |
 | `⌘'` / `⌘⇧'` | Next / previous comment | `⌘Z` | Undo the last change |

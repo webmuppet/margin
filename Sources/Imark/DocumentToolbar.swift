@@ -7,6 +7,7 @@ private extension NSToolbarItem.Identifier {
     static let openIn = NSToolbarItem.Identifier("openIn")
     static let theme = NSToolbarItem.Identifier("theme")
     static let comments = NSToolbarItem.Identifier("comments")
+    static let code = NSToolbarItem.Identifier("code")
     static let shortcuts = NSToolbarItem.Identifier("shortcuts")
     static let commentFile = NSToolbarItem.Identifier("commentFile")
     static let reviewSendBack = NSToolbarItem.Identifier("reviewSendBack")
@@ -40,7 +41,7 @@ extension DocumentWindowController: NSToolbarDelegate {
         // else is waiting on should not sit next to Find.
         let reading: [NSToolbarItem.Identifier] =
             [.toggleSidebar, .sidebarTrackingSeparator, .flexibleSpace,
-             .commentFile, .comments, .theme, .find, .export, .openIn]
+             .commentFile, .comments, .code, .theme, .find, .export, .openIn]
         guard Review.isReview(url) else { return reading }
 
         // A review keeps only what a reviewer does. Open in and Export are ways
@@ -77,6 +78,17 @@ extension DocumentWindowController: NSToolbarDelegate {
         item.toolTip = on ? "Hide All Comments (⇧⌘C)" : "Show All Comments (⇧⌘C)"
     }
 
+    /// A switch like Comments, shown the same way: filled and accent-coloured
+    /// while the source is showing.
+    func refreshCodeButton() {
+        guard let item = window?.toolbar?.items.first(where: { $0.itemIdentifier == .code })
+        else { return }
+        let image = NSImage(systemSymbolName: "chevron.left.forwardslash.chevron.right",
+                            accessibilityDescription: "Markdown Source")
+        item.image = showingCode ? image?.withSymbolConfiguration(.init(paletteColors: [.imarkAccent])) : image
+        item.toolTip = showingCode ? "Show Rendered Document (⌥⌘U)" : "Show Markdown Source (⌥⌘U)"
+    }
+
     func refreshThemeButton() {
         let item = window?.toolbar?.items.first { $0.itemIdentifier == .theme }
         (item?.view as? ThemeButton)?.show(Settings.theme)
@@ -98,6 +110,11 @@ extension DocumentWindowController: NSToolbarDelegate {
             return button(identifier, symbol: "magnifyingglass", label: "Find",
                           tip: "Find in Document (⌘F)",
                           action: #selector(performFind(_:)))
+
+        case .code:
+            return button(identifier, symbol: "chevron.left.forwardslash.chevron.right",
+                          label: "Markdown Source", tip: "Show Markdown Source (⌥⌘U)",
+                          action: #selector(toggleCodeView(_:)))
 
         case .commentFile:
             // Next to Comments, which shows the ones that exist: one names the

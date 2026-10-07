@@ -84,6 +84,7 @@ struct TestUndo {
             try undoKnowsWhereTheKeyboardIs()
             try aCopyIsNotTheSameFile()
             try pasteReachesANewFile()
+            try theCodeViewIsReachable()
         } catch {
             failures += 1
             print("FAIL threw: \(error)")
@@ -461,6 +462,37 @@ struct TestUndo {
         // renderer beside it — SchemeHandler finds no index.html, so the page
         // never loads. Copied next to Resources/ it does, and the file then
         // reads "# New\n\nPasted paragraph.\n\n- one\n- two\n".
+
+        window.close()
+    }
+
+    /// The code view has two ways in, and an item bound to a selector nothing
+    /// answers compiles, looks right and does nothing.
+    static func theCodeViewIsReachable() throws {
+        print("\n▸ the code view is in the toolbar and the View menu")
+
+        let url = fixture("# Code\n", named: "Code.md")
+        let window = DocumentWindowController(url: url)
+        window.window?.setFrameOrigin(NSPoint(x: -6_000, y: 0))
+        window.showWindow(nil)
+        spin(0.8)
+
+        let toggle = #selector(DocumentWindowController.toggleCodeView(_:))
+        let button = window.window?.toolbar?.items.first { $0.action == toggle }
+        check("the toolbar has the button", button != nil)
+        check("and it is aimed at this window", button?.target === window)
+
+        let item = NSApp.mainMenu?.items
+            .first(where: { $0.submenu?.title == "View" })?.submenu?
+            .items.first(where: { $0.action == toggle })
+        let answers = sequence(first: window.window?.firstResponder) { $0?.nextResponder }
+            .lazy.compactMap { $0 }.first { $0.responds(to: toggle) }
+        check("the View menu item reaches the window", item != nil && answers === window)
+
+        window.toggleCodeView(nil)
+        _ = item.map { window.validateMenuItem($0) }
+        check("and the item says how to get back", item?.title == "Show Rendered Document",
+              item?.title ?? "nil")
 
         window.close()
     }

@@ -230,6 +230,11 @@ public final class RendererView: NSView {
         call("window.imark.setEditing", on)
     }
 
+    /// The rendered document, or the file as selectable plain text.
+    public func setCodeView(_ on: Bool) {
+        call("window.imark.setCodeView", on)
+    }
+
     /// Undo and redo inside the open source editor, for the times ⌘Z has to
     /// mean the last keystroke rather than the last change to the document.
     public func undoInEditor() { call("window.imark.undoInEditor", []) }
