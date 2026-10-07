@@ -232,7 +232,7 @@ commands.
 | Where | What, and when |
 |---|---|
 | The `.md` you are reading | when you comment, and when you edit, delete or move a block. Written to a temporary file beside it and moved into place; it refuses to save at all if the document changed on disk since Margin read it. Settings turns everything but commenting off |
-| A `.md` you asked for | **File › New…** writes one heading at the path you choose; **File › Save As…** writes a copy of the document there and shows the copy |
+| A `.md` you asked for | **File › New…** writes one heading at the path you choose, and `⌘V` adds what you copied below it; **File › Save As…** writes a copy of the document there and shows the copy |
 | `~/.margin/pending` | while an agent is waiting on a review: which document, and what you decided. Deleted when the agent reads it |
 | `~/Library/Preferences/nz.co.humanloop.margin.plist` | your settings — theme, text size, width, whether blocks can be edited, the update check |
 | `~/.claude/skills`, `~/.codex/skills`, … | only if you accept the offer to set up your coding agents, and only the files the alert names |
@@ -251,7 +251,7 @@ commands.
 | | | | |
 |---|---|---|---|
 | `⌘N` / `⌘O` | New / open | `⌘F` | Find, prefilled with the selection |
-| `⌘S` / `⌘⇧S` | Save the block you are editing / save a copy | | |
+| `⌘S` / `⌘⇧S` | Save the block you are editing / save a copy | `⌘V` | Paste at the end of the document, when no block is open |
 | `⌘W` | Close window | `⌘G` / `⌘⇧G` | Next / previous hit |
 | `⌘\` | Toggle sidebar | `←` / `→` | Fold / unfold outline section |
 | `⌘[` / `⌘]` | Back / forward | `⌘R` | Reload |
