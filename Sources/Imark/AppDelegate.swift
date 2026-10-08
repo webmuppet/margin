@@ -74,7 +74,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool { true }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    /// Not "the last window": AppKit counts the Open panel as one, so
+    /// cancelling it at launch — or choosing a file in it, which closes it
+    /// before the file opens — quit the app. Closing the last *document* does
+    /// it instead, below.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     // MARK: - Windows
 
@@ -97,6 +101,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let controller = DocumentWindowController(url: key)
         controller.onClose = { [weak self] in
             self?.controllers.removeAll { $0 === controller }
+            // A turn later, so a document opened in the same moment — another
+            // tab taking over, a link followed into a new window — counts.
+            DispatchQueue.main.async {
+                guard let self, self.controllers.isEmpty, self.launchPanel == nil else { return }
+                NSApp.terminate(nil)
+            }
         }
         controllers.append(controller)
 
