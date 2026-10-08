@@ -21,6 +21,8 @@ public enum RendererMessage {
     case deleteBlock(lines: Range<Int>)
     case moveBlock(document: String)
     case editorFocus(Bool)
+    /// Which view the page is showing. Leaving the code view can be refused.
+    case codeView(Bool)
 }
 
 /// A block edited as markdown, on its way back to the file.
@@ -230,7 +232,7 @@ public final class RendererView: NSView {
         call("window.imark.setEditing", on)
     }
 
-    /// The rendered document, or the file as selectable plain text.
+    /// The rendered document, or the whole file as editable text.
     public func setCodeView(_ on: Bool) {
         call("window.imark.setCodeView", on)
     }
@@ -480,6 +482,9 @@ public final class RendererView: NSView {
                 let focused = body["focused"] as? Bool ?? false
                 owner.webView.editorHasKeyboard = focused
                 owner.onMessage?(.editorFocus(focused))
+
+            case "codeView":
+                owner.onMessage?(.codeView(body["on"] as? Bool ?? false))
 
             case "wikilinks":
                 owner.onMessage?(.wikilinks(body["targets"] as? [String] ?? []))

@@ -14,7 +14,7 @@
 // feature is broken, and they stop using it long before they file anything.
 
 import { extractComments } from '../renderer/src/markers.js'
-import { segmentsOf, spliceSegment, textOf } from '../renderer/src/source.js'
+import { changedLines, segmentsOf, spliceSegment, textOf } from '../renderer/src/source.js'
 import { validateCommit } from '../renderer/src/validate.js'
 
 let failures = 0
@@ -270,6 +270,40 @@ if (md) {
     check(`${name}: all ${pieces.length} pieces commit back unchanged`,
       refused.length === 0,
       refused.map(({ piece, verdict }) => `[${piece.from},${piece.to}) ${verdict.reason}`).join(' | '))
+  }
+}
+
+// ------------------------------------------------------------- code view
+
+// The code view edits the whole file and commits only the lines that changed.
+// Two things have to hold for every edit: spliced back, the piece gives exactly
+// the file that was typed — anything else writes a different document from the
+// one on screen — and the check sees it as the block edit it is.
+{
+  const file = doc + '\n'
+  const lines = file.split('\n')
+  const without = (from, to) => [...lines.slice(0, from), ...lines.slice(to)].join('\n')
+  const commit = (after) => {
+    const { segment, text } = changedLines(file, after)
+    return { segment, text, spliced: spliceSegment(file, segment, text),
+      verdict: validateCommit(file, spliceSegment(file, segment, text), segment, text) }
+  }
+  const cases = [
+    ['a word changed', file.replace('opening paragraph', 'first paragraph'), true],
+    ['a line added at the end', file + 'A new last line.\n', true],
+    ['a line added at the top', 'A new first line.\n' + file, true],
+    ['a paragraph deleted', without(6, 8), true],
+    ['a note deleted whole', without(2, 6), true],
+    ['everything deleted but one line', 'Only this.\n', false],
+    ['a note left without its close', without(4, 5), false],
+    ['nothing changed', file, true],
+  ]
+  for (const [name, after, allowed] of cases) {
+    const { spliced, verdict } = commit(after)
+    check(`code view, ${name}: splices back to exactly what was typed`, spliced === after,
+      JSON.stringify(spliced.slice(0, 80)))
+    check(`code view, ${name}: ${allowed ? 'allowed' : 'refused'}`, verdict.ok === allowed,
+      verdict.reason ?? '')
   }
 }
 

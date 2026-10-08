@@ -41,7 +41,7 @@ export const ICON_RENDERED
 /// Tells Swift whether a block or note opened as markdown currently has the
 /// keyboard. Undo is the reason: bound to the window it reverts a change to
 /// the document, which is the wrong answer entirely while somebody is typing.
-const announceFocus = (focused) => {
+export const announceFocus = (focused) => {
   window.webkit?.messageHandlers?.imark?.postMessage({ type: 'editorFocus', focused })
 }
 

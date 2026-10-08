@@ -1541,28 +1541,62 @@ img[data-blocked] {
 :root[data-editing='false'] .block-grip { display: none !important; }
 :root[data-preview='true'] .block-grip { display: none !important; }
 
-/* Code view: the file as text. Everything else on the page goes, the rails and
-   margin controls included, so Select All selects the source and nothing else. */
-#source-view {
+/* Code view: the file as editable text. Everything else on the page goes, the
+   rails and margin controls included, so Select All takes the source and
+   nothing else. */
+#code-view {
   display: none;
 }
 
-:root[data-view='code'] body > :not(#source-view) {
+:root[data-view='code'] body > :not(#code-view) {
   display: none !important;
 }
 
-:root[data-view='code'] #source-view {
+:root[data-view='code'] #code-view {
   display: block;
   max-width: var(--measure);
   margin: 0 auto;
   padding: calc(var(--top-inset, 0px) + 32px) 32px 64px;
+}
+
+#code-view .code-stack {
+  display: grid;
+}
+
+#code-view .code-stack > * {
+  grid-area: 1 / 1;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
   font: calc(var(--size-body) * 0.875) / 1.6 var(--font-mono);
-  color: var(--text);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+#code-view .code-mirror {
+  color: transparent;
+  pointer-events: none;
+}
+
+#code-view textarea {
+  position: relative;
+  display: block;
+  outline: none;
+  resize: none;
+  overflow: hidden;
   background: none;
-  border: 0;
-  border-radius: 0;
-  user-select: text;
-  -webkit-user-select: text;
+  color: var(--text);
+  caret-color: var(--accent);
+}
+
+#code-view textarea[readonly] {
+  caret-color: transparent;
+}
+
+/* Padding on a mark would push the copy out of line with the text above it. */
+#code-view .code-mirror mark.find {
+  padding: 0;
+  color: transparent;
 }

@@ -110,3 +110,38 @@ export function spliceSegment(source, { from, to }, replacement) {
   lines.splice(from, to - from, ...replacement.split('\n'))
   return lines.join('\n')
 }
+
+/// The one run of lines that differs between two versions of the file, as a
+/// piece of the old one and the text that replaces it.
+///
+/// What the code view commits. Handing over the whole file as one piece would
+/// make every note in it "the one being edited", so deleting a single note by
+/// hand would be refused for every note it did not touch. The lines that
+/// actually changed get the same checks a block edit gets.
+///
+/// A replacement is never empty: spliced back, an empty string is one blank
+/// line, not none. A pure deletion takes a neighbouring line with it on both
+/// sides of the swap — a blank one where there is one, so deleting a note
+/// whole still reads as clearing it.
+export function changedLines(before, after) {
+  const a = before.split('\n')
+  const b = after.split('\n')
+  let start = 0
+  while (start < a.length && start < b.length && a[start] === b[start]) start += 1
+  let endA = a.length
+  let endB = b.length
+  while (endA > start && endB > start && a[endA - 1] === b[endB - 1]) {
+    endA -= 1
+    endB -= 1
+  }
+  if (endB === start) {
+    const above = start > 0
+    const below = endA < a.length
+    if (above && (!below || !a[start - 1].trim())) start -= 1
+    else if (below) {
+      endA += 1
+      endB += 1
+    }
+  }
+  return { segment: segment('content', start, endA), text: b.slice(start, endB).join('\n') }
+}

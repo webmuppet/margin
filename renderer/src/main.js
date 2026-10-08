@@ -11,9 +11,11 @@ import renderMathInElement from 'katex/contrib/auto-render'
 import mermaid from 'mermaid'
 
 import wikilink from './wikilink.js'
-import { ICON_SOURCE, elementsFor, openSourceEditor, withEmptyAncestors } from './editor.js'
+import {
+  ICON_SOURCE, announceFocus, elementsFor, openSourceEditor, withEmptyAncestors,
+} from './editor.js'
 import { canMove, documentAfterMove, neighbourUnit, unitFor } from './move.js'
-import { segmentsOf, spliceSegment, textOf } from './source.js'
+import { changedLines, segmentsOf, spliceSegment, textOf } from './source.js'
 import { validateCommit, validateMove } from './validate.js'
 import {
   attachComments,
@@ -764,11 +766,6 @@ function addCopyButtons(root) {
 /* ---------------------------------------------------------------- render */
 
 const content = () => document.getElementById('content')
-/// The file as text, for the code view. Filled on every render, shown only
-/// while `data-view="code"` is set on the root. Made here rather than in
-/// index.html so the harness, which has a page of its own, gets one too.
-const sourceView = () => document.getElementById('source-view')
-  ?? document.body.appendChild(Object.assign(document.createElement('pre'), { id: 'source-view' }))
 const inCodeView = () => document.documentElement.dataset.view === 'code'
 
 let activeHeadings = []
@@ -783,7 +780,7 @@ let lastComments = []
 async function render({ markdown, path, theme, preview, rail }) {
   const token = ++renderToken
   lastSource = markdown ?? ''
-  sourceView().textContent = lastSource
+  syncCodeView(path)
   docDir = path ? path.slice(0, path.lastIndexOf('/')) || '/' : '/'
   slugCounts.clear()
 
@@ -1634,8 +1631,8 @@ document.addEventListener('selectionchange', () => {
   // Debounced: a drag fires this on every pixel, and the popover should appear
   // when the hand stops, not chase it across the paragraph.
   selectionTimer = setTimeout(() => {
-    // The code view is for selecting and copying the source; a comment needs
-    // the rendered block a selection sits in, and there is none here.
+    // A selection in the code view is text being edited; a comment needs the
+    // rendered block a selection sits in, and there is none here.
     const info = inCodeView() ? null : selectionInfo()
     if (info) {
       hadSelection = true
@@ -1707,7 +1704,11 @@ function runFind(query) {
   const needle = (query ?? '').toLowerCase()
   if (needle.length === 0) return report()
 
-  const root = inCodeView() ? sourceView() : content()
+  // In the code view the hits are marked in a copy of the text behind the box:
+  // WebKit paints no selection in a text box that does not have the keyboard,
+  // and giving it the keyboard would take it from the search field.
+  const root = inCodeView() ? codeMirror() : content()
+  if (inCodeView()) root.textContent = codeArea().value
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT
@@ -1765,6 +1766,156 @@ function report() {
 
 /* ------------------------------------------------------------------- api */
 
+/* -------------------------------------------------------------- code view */
+
+// The whole file as text, editable in place. Saved the way a block is — on
+// ⌘S, ⌘↵ or clicking away — and through the same check, so a note broken by
+// hand is refused rather than written.
+//
+// The text is the only copy of what somebody typed, so a render never throws
+// it away to show the file. `codeBase` is the file the text was started from:
+// while the text still matches it, or matches what we last sent, a render
+// replaces it; if the file changed on disk under unsaved text, the text stays
+// and saving is refused until it is dealt with.
+let codeBase = null
+let codeSent = null
+let codePath = null
+
+const codeView = () => document.getElementById('code-view') ?? makeCodeView()
+const codeArea = () => codeView().querySelector('textarea')
+const codeError = () => codeView().querySelector('.source-error')
+const codeMirror = () => codeView().querySelector('.code-mirror')
+
+/// Made here rather than in index.html so the harness, which has a page of
+/// its own, gets one too.
+function makeCodeView() {
+  const view = document.createElement('div')
+  view.id = 'code-view'
+
+  const area = document.createElement('textarea')
+  area.spellcheck = false
+  area.setAttribute('aria-label', 'Markdown source of the whole document')
+  area.readOnly = document.documentElement.dataset.editing === 'false'
+
+  const message = document.createElement('p')
+  message.className = 'source-error'
+  message.setAttribute('role', 'alert')
+  message.hidden = true
+
+  // Same cell, same font and wrapping as the box, text transparent: what shows
+  // through is only the find marks, sitting under the words they mark.
+  const mirror = document.createElement('div')
+  mirror.className = 'code-mirror'
+  mirror.setAttribute('aria-hidden', 'true')
+
+  const stack = document.createElement('div')
+  stack.className = 'code-stack'
+  stack.append(mirror, area)
+  view.append(stack, message)
+  document.body.appendChild(view)
+
+  area.addEventListener('input', () => {
+    fitCodeView()
+    // The marks are against the text as it was; typing moves it out from under
+    // them.
+    if (matches.length) {
+      clearFind()
+      report()
+    }
+  })
+  // So ⌘Z, ⌘S and ⌘V mean this box while the keyboard is in it.
+  area.addEventListener('focus', () => announceFocus(true))
+  area.addEventListener('blur', () => {
+    announceFocus(false)
+    if (inCodeView()) saveCodeView()
+  })
+  area.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault()
+      saveCodeView()
+    }
+    // Back to the file as it is on disk, which is the way out of a refusal
+    // over a file that changed underneath.
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      loadCodeView()
+    }
+  })
+  area.commitSource = saveCodeView
+  return view
+}
+
+function fitCodeView() {
+  const area = codeArea()
+  if (!inCodeView()) return
+  area.style.height = 'auto'
+  area.style.height = `${area.scrollHeight}px`
+}
+
+function loadCodeView() {
+  const area = codeArea()
+  if (area.value !== lastSource) area.value = lastSource
+  codeBase = lastSource
+  codeError().hidden = true
+  fitCodeView()
+}
+
+function syncCodeView(path) {
+  const area = codeArea()
+  // A different document in this window. Its text has nothing to do with the
+  // last one's, the same way an open block editor goes with the old page.
+  if (path !== codePath) {
+    codePath = path
+    return loadCodeView()
+  }
+  if (area.value === codeBase || area.value === lastSource) return loadCodeView()
+  // Our own save landing while somebody kept typing: the file is now what we
+  // sent, and what they typed since is still unsaved on top of it.
+  if (lastSource === codeSent) codeBase = lastSource
+}
+
+function refuseCode(reason) {
+  const message = codeError()
+  message.textContent = reason
+  message.hidden = false
+  return false
+}
+
+/// True if there was nothing to save or it was accepted.
+function saveCodeView() {
+  const area = codeArea()
+  if (area.readOnly || area.value === lastSource) {
+    codeError().hidden = true
+    return true
+  }
+  if (codeBase !== lastSource) {
+    return refuseCode('The file changed on disk while you were editing, so saving would '
+      + 'overwrite that change. Copy what you need, then press Esc to load the file as it is now.')
+  }
+  const { segment, text } = changedLines(lastSource, area.value)
+  const verdict = commitSource(segment, text)
+  if (!verdict.ok) return refuseCode(verdict.reason)
+  codeSent = area.value
+  codeError().hidden = true
+  return true
+}
+
+/// Anything open as a block is saved first. Two editors over the same lines
+/// is two versions of them, and whichever saved second would win.
+function enterCodeView() {
+  for (const area of content().querySelectorAll('.source-text')) {
+    if (area.commitSource && !area.commitSource()) return false
+  }
+  for (const box of content().querySelectorAll('.source-box')) box.remove()
+  for (const hidden of content().querySelectorAll('.is-source-hidden')) {
+    hidden.classList.remove('is-source-hidden')
+  }
+  clearBlockTarget()
+  window.getSelection()?.removeAllRanges()
+  loadCodeView()
+  return true
+}
+
 window.imark = {
   render,
   scrollToAnchor,
@@ -1779,24 +1930,31 @@ window.imark = {
   setPreview(on) {
     document.documentElement.dataset.preview = on ? 'true' : 'false'
   },
-  /// The rendered document, or the file as plain text. Everything else on the
-  /// page is hidden in code view, so Select All takes the whole file and only
-  /// the file.
+  /// The rendered document, or the whole file as text you can edit. Swift is
+  /// told which one is showing, because leaving can be refused: text that
+  /// cannot be saved stays on screen rather than going away unsaved.
   setCodeView(on) {
-    if (on === inCodeView()) return
-    clearFind()
-    report()
-    clearBlockTarget()
-    window.getSelection()?.removeAllRanges()
-    if (on) document.documentElement.dataset.view = 'code'
-    else delete document.documentElement.dataset.view
-    window.scrollTo(0, 0)
+    if (on !== inCodeView()) {
+      const ok = on ? enterCodeView() : saveCodeView()
+      if (ok) {
+        clearFind()
+        report()
+        if (on) document.documentElement.dataset.view = 'code'
+        else delete document.documentElement.dataset.view
+        window.scrollTo(0, 0)
+        if (on) fitCodeView()
+      } else {
+        NSSoundBeep()
+      }
+    }
+    bridge({ type: 'codeView', on: inCodeView() })
   },
   /// Whether the document may be changed in place. Turning it off closes
   /// anything already open: leaving an editor on screen that can no longer
   /// write would be a box that swallows what you type.
   setEditing(on) {
     document.documentElement.dataset.editing = on ? 'true' : 'false'
+    codeArea().readOnly = !on
     if (!on) {
       for (const box of document.querySelectorAll('.source-box')) box.remove()
       for (const hidden of document.querySelectorAll('.is-source-hidden')) {
@@ -1855,20 +2013,20 @@ window.imark = {
   /// the platform and is still the only thing that reaches a text control's
   /// own undo stack — the one that already holds what was typed.
   undoInEditor() {
-    const area = document.querySelector('.source-text')
+    const area = inCodeView() ? codeArea() : document.querySelector('.source-text')
     if (!area) return false
     area.focus()
     return document.execCommand('undo')
   },
   redoInEditor() {
-    const area = document.querySelector('.source-text')
+    const area = inCodeView() ? codeArea() : document.querySelector('.source-text')
     if (!area) return false
     area.focus()
     return document.execCommand('redo')
   },
   /// ⌘S while a block is open as markdown: the same as ⌘↵ inside it.
   saveInEditor() {
-    const area = document.querySelector('.source-text')
+    const area = inCodeView() ? codeArea() : document.querySelector('.source-text')
     return area?.commitSource ? area.commitSource() : false
   },
   /// ⌘V with no block open, which Swift only sends when nothing editable has

@@ -318,6 +318,10 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, NSMe
         case .editorFocus(let focused):
             editorHasKeyboard = focused
 
+        case .codeView(let on):
+            showingCode = on
+            refreshCodeButton()
+
         case .editSource(let edit):
             commitSource(edit)
 
@@ -677,8 +681,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, NSMe
         }
     }
 
-    /// ⌥⌘U, and the toolbar's code button. Read-only: edits still go through
-    /// a block, where the renderer can check them.
+    /// ⌥⌘U, and the toolbar's code button. Set here so the button answers at
+    /// once, and set again from what the page reports: leaving the code view
+    /// is refused while it holds text that cannot be saved.
     @objc func toggleCodeView(_ sender: Any?) {
         showingCode.toggle()
         content.renderer.setCodeView(showingCode)
