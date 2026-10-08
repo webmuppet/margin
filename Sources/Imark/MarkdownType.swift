@@ -16,6 +16,16 @@ enum MarkdownType {
         extensions.contains(url.pathExtension.lowercased())
     }
 
+    /// Markdown from the system's recent-documents list that is still there,
+    /// newest first. The list holds whatever was opened through the document
+    /// controller, and a file moved or deleted since is an entry that opens
+    /// nothing.
+    static var recents: [URL] {
+        NSDocumentController.shared.recentDocumentURLs
+            .map { $0.standardizedFileURL }
+            .filter { matches($0) && FileManager.default.fileExists(atPath: $0.path) }
+    }
+
     /// The type a `.md` file actually has on this machine.
     ///
     /// Not a constant, and that is the whole point. `net.daringfireball.markdown`

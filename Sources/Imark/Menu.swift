@@ -85,6 +85,9 @@ enum Menu {
         let menu = NSMenu(title: "File")
         menu.addItem(withTitle: "New…", action: #selector(AppDelegate.newDocument(_:)), keyEquivalent: "n")
         menu.addItem(withTitle: "Open…", action: #selector(AppDelegate.openDocument(_:)), keyEquivalent: "o")
+        let recent = menu.addItem(withTitle: "Open Recent", action: nil, keyEquivalent: "")
+        recent.submenu = NSMenu(title: "Open Recent")
+        recent.submenu?.delegate = RecentMenu.shared
         menu.addItem(.separator())
         menu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         // Save is the block you are editing; everything else in this app writes
@@ -201,5 +204,45 @@ enum Menu {
         )
         previousComment.keyEquivalentModifierMask = [.command, .shift]
         return menu
+    }
+}
+
+/// File › Open Recent, filled each time it opens from the same list the menu
+/// bar item and the sidebar read. AppKit fills this menu by itself only for a
+/// document-based app or through a private name; built by hand it is a few
+/// lines and says exactly what is in it.
+private final class RecentMenu: NSObject, NSMenuDelegate {
+    static let shared = RecentMenu()
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
+        let recents = MarkdownType.recents.prefix(10)
+        // Two READMEs read as one entry twice. The folder tells them apart,
+        // the way the Finder's own Open Recent does.
+        let names = recents.map(\.lastPathComponent)
+        for url in recents {
+            let name = url.lastPathComponent
+            let title = names.filter { $0 == name }.count > 1
+                ? "\(name) — \(url.deletingLastPathComponent().lastPathComponent)"
+                : name
+            let item = menu.addItem(withTitle: title, action: #selector(openRecent(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = url
+            item.toolTip = url.path
+            item.image = NSWorkspace.shared.icon(forFile: url.path)
+            item.image?.size = NSSize(width: 16, height: 16)
+        }
+        if !recents.isEmpty { menu.addItem(.separator()) }
+        let clear = menu.addItem(
+            withTitle: "Clear Menu",
+            action: recents.isEmpty ? nil : #selector(NSDocumentController.clearRecentDocuments(_:)),
+            keyEquivalent: ""
+        )
+        clear.target = NSDocumentController.shared
+    }
+
+    @objc func openRecent(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+        (NSApp.delegate as? AppDelegate)?.open(url)
     }
 }

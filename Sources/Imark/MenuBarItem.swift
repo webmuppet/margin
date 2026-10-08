@@ -55,10 +55,7 @@ final class MenuBarItem {
         )
         open.target = NSApp.delegate
 
-        let recents = NSDocumentController.shared.recentDocumentURLs
-            .map { $0.standardizedFileURL }
-            .filter { MarkdownType.matches($0) && FileManager.default.fileExists(atPath: $0.path) }
-            .prefix(8)
+        let recents = MarkdownType.recents.prefix(8)
 
         if !recents.isEmpty {
             menu.addItem(.separator())

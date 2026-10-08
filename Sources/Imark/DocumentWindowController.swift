@@ -250,10 +250,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, NSMe
         // Recently opened markdown from anywhere, minus what is already listed
         // as a neighbour — the sibling list is only useful inside a doc folder.
         let siblings = Set(markdown)
-        let recents = NSDocumentController.shared.recentDocumentURLs
-            .map { $0.standardizedFileURL }
-            .filter { $0 != url && !siblings.contains($0) && MarkdownType.matches($0) }
-            .filter { FileManager.default.fileExists(atPath: $0.path) }
+        let recents = MarkdownType.recents
+            .filter { $0 != url && !siblings.contains($0) }
             .prefix(5)
 
         sidebar.update(files: markdown, current: url, recents: Array(recents))

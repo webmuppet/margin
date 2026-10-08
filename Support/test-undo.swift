@@ -85,6 +85,7 @@ struct TestUndo {
             try aCopyIsNotTheSameFile()
             try pasteReachesANewFile()
             try theCodeViewIsReachable()
+            try openRecentListsWhatWasOpened()
         } catch {
             failures += 1
             print("FAIL threw: \(error)")
@@ -495,6 +496,45 @@ struct TestUndo {
               item?.title ?? "nil")
 
         window.close()
+    }
+
+    /// File › Open Recent is filled when it opens, from the system's list. Two
+    /// files with one name get their folders, a file deleted since is left
+    /// out, and Clear Menu empties it.
+    static func openRecentListsWhatWasOpened() throws {
+        print("\n▸ File › Open Recent")
+
+        let documents = NSDocumentController.shared
+        documents.clearRecentDocuments(nil)
+        let a = fixture("# A\n", named: "README.md")
+        let b = fixture("# B\n", named: "README.md")
+        let gone = fixture("# Gone\n", named: "Gone.md")
+        for url in [gone, b, a] { documents.noteNewRecentDocumentURL(url) }
+        try FileManager.default.removeItem(at: gone)
+
+        let file = NSApp.mainMenu?.items.first(where: { $0.submenu?.title == "File" })?.submenu
+        let recent = file?.items.first(where: { $0.title == "Open Recent" })?.submenu
+        check("the File menu has Open Recent", recent != nil)
+        guard let recent else { return }
+
+        recent.delegate?.menuNeedsUpdate?(recent)
+        let titles = recent.items.filter { !$0.isSeparatorItem }.map(\.title)
+        let folder = { (url: URL) in url.deletingLastPathComponent().lastPathComponent }
+        check("the same name twice is told apart by folder",
+              titles.prefix(2) == ["README.md — \(folder(a))", "README.md — \(folder(b))"],
+              titles.joined(separator: " | "))
+        check("a file deleted since is left out", !titles.contains("Gone.md"), titles.joined(separator: " | "))
+        let entry = recent.items.first
+        check("an entry is aimed at something that opens it",
+              entry.map { ($0.target as AnyObject?)?.responds(to: $0.action) == true } == true)
+        let clear = recent.items.last
+        check("Clear Menu is offered", clear?.title == "Clear Menu" && clear?.action != nil)
+
+        documents.clearRecentDocuments(nil)
+        recent.delegate?.menuNeedsUpdate?(recent)
+        check("and once cleared it is all that is left, greyed",
+              recent.items.count == 1 && recent.items.first?.action == nil,
+              recent.items.map(\.title).joined(separator: " | "))
     }
 
     /// The window and its WebView need a run loop to get anything done.

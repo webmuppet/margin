@@ -47,6 +47,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         guard controllers.isEmpty else { return }
         if let launchPanel { return launchPanel.makeKeyAndOrderFront(nil) }
         let panel = Self.markdownPanel()
+        // Where you were last reading, since that is the likeliest place to be
+        // going back to. ⌘O keeps the panel's own memory of the last folder.
+        panel.directoryURL = MarkdownType.recents.first?.deletingLastPathComponent()
         launchPanel = panel
         panel.begin { [weak self] response in
             self?.launchPanel = nil
