@@ -5,7 +5,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // links, so identity has to be asked for rather than remembered.
     private var controllers: [DocumentWindowController] = []
 
-    private var welcome: WelcomeWindowController?
+    /// The Open panel shown when Margin starts with nothing to show. Kept so a
+    /// document that arrives some other way — a Finder double-click while it
+    /// is up — can put it away.
+    private var launchPanel: NSOpenPanel?
     private var cascadePoint = NSPoint.zero
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -15,9 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         NSApp.activate(ignoringOtherApps: true)
         // Launch Services delivers documents just after this callback, so give
         // it a beat before deciding the app was opened empty — otherwise the
-        // welcome window flashes on every double-click.
+        // Open panel flashes on every double-click.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-            self?.showWelcomeIfEmpty()
+            self?.showOpenPanelIfEmpty()
         }
         // Well after launch: an update dialog that beats the document to the
         // screen makes the update feel more important than the reading.
@@ -29,32 +32,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc func checkForUpdates(_ sender: Any?) { Updates.checkNow() }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag { showWelcomeIfEmpty() }
+        if !flag { showOpenPanelIfEmpty() }
         return true
     }
 
     func applicationOpenUntitledFile(_ sender: NSApplication) -> Bool {
-        showWelcomeIfEmpty()
+        showOpenPanelIfEmpty()
         return true
     }
 
-    private func showWelcomeIfEmpty() {
+    /// Started with nothing to show, Margin asks for something to show. Not
+    /// modal, so ⌘N, Settings and the menu still work while it is up.
+    private func showOpenPanelIfEmpty() {
         guard controllers.isEmpty else { return }
-        if let welcome {
-            welcome.showWindow(nil)
-            return
+        if let launchPanel { return launchPanel.makeKeyAndOrderFront(nil) }
+        let panel = Self.markdownPanel()
+        launchPanel = panel
+        panel.begin { [weak self] response in
+            self?.launchPanel = nil
+            guard response == .OK else { return }
+            for url in panel.urls { self?.open(url) }
         }
-        let controller = WelcomeWindowController()
-        controller.onOpen = { [weak self] urls in
-            for url in urls { self?.open(url) }
-        }
-        welcome = controller
-        controller.showWindow(nil)
     }
 
-    private func dismissWelcome() {
-        welcome?.close()
-        welcome = nil
+    private static func markdownPanel() -> NSOpenPanel {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.allowedContentTypes = MarkdownType.contentTypes
+        return panel
     }
 
     /// Launch Services hands us documents here — Finder double-click, drag onto
@@ -75,7 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// do not get to see and should not be second-guessing.
     func open(_ url: URL, asTabIn host: NSWindow? = nil) {
         let key = url.resolvingSymlinksInPath().standardizedFileURL
-        dismissWelcome()
+        launchPanel?.cancel(nil)
 
         // Opening the same file twice brings the existing window forward
         // instead of stacking duplicates (F2).
@@ -119,6 +125,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         if item.action == #selector(makeDefaultHandler(_:)) {
             return !MarkdownType.imarkIsDefault
         }
+        if item.action == #selector(setUpAgents(_:)) {
+            // Only where there is an agent to set up, and only until it is.
+            item.isHidden = AgentSetup.found.isEmpty
+            return !AgentSetup.isInstalled
+        }
         return true
     }
 
@@ -133,6 +144,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 : "Use Get Info on a .md file → Open with → Change All."
             alert.alertStyle = ok ? .informational : .warning
             alert.runModal()
+        }
+    }
+
+    /// Says what it will write before it writes it, path by path. This is the
+    /// one thing Margin does outside its own files and somebody's documents,
+    /// and it lands in folders other programs own.
+    @objc func setUpAgents(_ sender: Any?) {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let paths = AgentSetup.plannedFiles
+            .map { $0.path.replacingOccurrences(of: home, with: "~") }
+            .joined(separator: "\n")
+
+        let skipped = AgentSetup.unsupportedFound
+        let alert = NSAlert()
+        alert.messageText = "Set Margin up for your coding agents?"
+        alert.informativeText = [
+            "This writes:",
+            "",
+            paths,
+            "",
+            "Your agent can then open a document here for you to comment on, and "
+                + "read your notes back out of the file. Nothing else is touched, "
+                + "and undoing it is deleting exactly these.",
+            skipped.isEmpty ? "" : "\nAlso found, and left alone: "
+                + skipped.map(\.name).joined(separator: ", ")
+                + ". Margin doesn't know where those keep their skills.",
+        ].joined(separator: "\n")
+        alert.addButton(withTitle: "Set Up")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        do {
+            try AgentSetup.install()
+        } catch {
+            let failure = NSAlert()
+            failure.messageText = "Margin couldn't set that up."
+            failure.informativeText = (error as? LocalizedError)?.errorDescription ?? "\(error)"
+            failure.runModal()
         }
     }
 
@@ -170,10 +219,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     @objc func openDocument(_ sender: Any?) {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = true
-        panel.canChooseDirectories = false
-        panel.allowedContentTypes = MarkdownType.contentTypes
+        let panel = Self.markdownPanel()
         guard panel.runModal() == .OK else { return }
         for url in panel.urls { open(url) }
     }

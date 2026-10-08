@@ -221,7 +221,7 @@ before opening it, and Margin writes the decision beside that file. Every other
 /margin:margin-notes PLAN.md      # notes you already left
 ```
 
-Launched with no document, Margin offers to **set itself up for the coding agents
+**Margin › Set Up for Coding Agents…** sets Margin up **for the coding agents
 on your machine** — one skill, written into each one's `skills` folder. The alert
 names every file before writing it, and undoing it is deleting those. Claude Code
 and Codex read the same `SKILL.md`; only Claude Code also takes the two loose

@@ -66,6 +66,12 @@ enum Menu {
             keyEquivalent: ""
         )
         makeDefault.target = NSApp.delegate
+        let agents = menu.addItem(
+            withTitle: "Set Up for Coding Agents…",
+            action: #selector(AppDelegate.setUpAgents(_:)),
+            keyEquivalent: ""
+        )
+        agents.target = NSApp.delegate
         menu.addItem(.separator())
         let hide = menu.addItem(withTitle: "Hide Margin", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         hide.target = NSApp
