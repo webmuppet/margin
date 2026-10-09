@@ -811,12 +811,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, NSMe
         buildToolbar()   // the button now wears the icon of what you just chose
     }
 
-    @objc func openInPreferredEditor(_ sender: Any?) {
-        let editors = Editors.installed(for: url)
-        guard let editor = Editors.preferred(from: editors) else { return NSSound.beep() }
-        Editors.open(url, with: editor)
-    }
-
     // MARK: - NSWindowDelegate
 
     @objc private func settingsChanged() { applySettings() }

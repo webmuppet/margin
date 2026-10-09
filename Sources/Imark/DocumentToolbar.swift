@@ -3,7 +3,8 @@ import AppKit
 private extension NSToolbarItem.Identifier {
     static let find = NSToolbarItem.Identifier("find")
     static let text = NSToolbarItem.Identifier("text")
-    static let export = NSToolbarItem.Identifier("export")
+    static let share = NSToolbarItem.Identifier("share")
+    static let print = NSToolbarItem.Identifier("print")
     static let openIn = NSToolbarItem.Identifier("openIn")
     static let theme = NSToolbarItem.Identifier("theme")
     static let comments = NSToolbarItem.Identifier("comments")
@@ -12,6 +13,10 @@ private extension NSToolbarItem.Identifier {
     static let commentFile = NSToolbarItem.Identifier("commentFile")
     static let reviewSendBack = NSToolbarItem.Identifier("reviewSendBack")
     static let reviewApprove = NSToolbarItem.Identifier("reviewApprove")
+}
+
+extension DocumentWindowController: NSSharingServicePickerToolbarItemDelegate {
+    public func items(for pickerToolbarItem: NSSharingServicePickerToolbarItem) -> [Any] { [url] }
 }
 
 extension DocumentWindowController: NSToolbarDelegate {
@@ -41,14 +46,14 @@ extension DocumentWindowController: NSToolbarDelegate {
         // else is waiting on should not sit next to Find.
         let reading: [NSToolbarItem.Identifier] =
             [.toggleSidebar, .sidebarTrackingSeparator, .flexibleSpace,
-             .commentFile, .comments, .code, .theme, .find, .export, .openIn]
+             .commentFile, .comments, .code, .theme, .find, .print, .share, .openIn]
         guard Review.isReview(url) else { return reading }
 
-        // A review keeps only what a reviewer does. Open in and Export are ways
-        // of taking a document somewhere else, and this one is a copy that
+        // A review keeps only what a reviewer does. Open in, Share and Print are
+        // ways of taking a document somewhere else, and this one is a copy that
         // exists to be answered — editing it in Cursor changes nothing anybody
         // will read, and printing it is printing a working file.
-        let reviewing = reading.filter { $0 != .export && $0 != .openIn }
+        let reviewing = reading.filter { ![.print, .share, .openIn].contains($0) }
         // Once it is decided, only the button that was pressed stays. Hiding the
         // other one leaves its slot behind, and an empty pill in the toolbar
         // looks like something that failed to load.
@@ -140,13 +145,19 @@ extension DocumentWindowController: NSToolbarDelegate {
             item.action = #selector(AppDelegate.showShortcuts(_:))
             return item
 
-        case .export:
-            // The share glyph promises a share sheet and opens the print panel
-            // instead. Saying so is the cheap half of the fix; the icon is the
-            // other half and belongs with whatever sharing ends up being.
-            return button(identifier, symbol: "square.and.arrow.up", label: "Export",
+        case .print:
+            return button(identifier, symbol: "printer", label: "Print",
                           tip: "Print or Save as PDF (⌘P)",
                           action: #selector(printDocument(_:)))
+
+        case .share:
+            // The system's own share button: it opens the share menu for the
+            // file (AirDrop, Mail, Messages and so on) under the button.
+            let item = NSSharingServicePickerToolbarItem(itemIdentifier: identifier)
+            item.label = "Share"
+            item.toolTip = "Share"
+            item.delegate = self
+            return item
 
         case .theme:
             let item = NSToolbarItem(itemIdentifier: identifier)
@@ -155,22 +166,27 @@ extension DocumentWindowController: NSToolbarDelegate {
             return item
 
         case .openIn:
-            // A split button: the face opens the editor you used last, the
-            // chevron lets you pick another one.
-            let item = NSMenuToolbarItem(itemIdentifier: identifier)
-            let editors = Editors.installed(for: url)
-            let preferred = Editors.preferred(from: editors)
-            item.image = preferred.map(icon(for:))
-                ?? NSImage(systemSymbolName: "square.and.pencil", accessibilityDescription: nil)
-            item.label = "Open in"
-            item.toolTip = preferred.map { "Open in \($0.lastPathComponent.replacingOccurrences(of: ".app", with: ""))" }
-                ?? "Open in editor"
-            item.menu = editorsMenu()
-            item.showsIndicator = !editors.isEmpty
-            if preferred != nil {
-                item.target = self
-                item.action = #selector(openInPreferredEditor(_:))
+            // A button that opens the editors menu under itself. It was a
+            // split button — face for the editor used last, chevron for the
+            // rest — and the toolbar draws a menu item as a group of its own,
+            // apart from the row beside it. A custom view, the way Appearance
+            // is, stays in the row.
+            let preferred = Editors.preferred(from: Editors.installed(for: url))
+            let image = preferred.map(icon(for:))
+                ?? NSImage(systemSymbolName: "square.and.pencil", accessibilityDescription: "Open in")
+            image?.size = NSSize(width: 16, height: 16)
+            let button = MenuToolbarButton(image: image, tip: "Open in another app") { [weak self] button in
+                guard let self else { return }
+                self.editorsMenu().popUp(
+                    positioning: nil,
+                    at: NSPoint(x: 0, y: button.isFlipped ? button.bounds.maxY + 4 : -4),
+                    in: button
+                )
             }
+            let item = NSToolbarItem(itemIdentifier: identifier)
+            item.view = button
+            item.label = "Open in"
+            item.toolTip = "Open in another app"
             return item
 
         case .reviewSendBack:
@@ -360,4 +376,33 @@ extension DocumentWindowController: NSToolbarDelegate {
         return image
     }
 
+}
+
+/// A toolbar button that opens a menu under itself, sized like ThemeButton so
+/// the row reads as one.
+private final class MenuToolbarButton: NSButton {
+    private let onPress: (NSButton) -> Void
+
+    init(image: NSImage?, tip: String, onPress: @escaping (NSButton) -> Void) {
+        self.onPress = onPress
+        super.init(frame: .zero)
+        bezelStyle = .texturedRounded
+        title = ""
+        self.image = image
+        imagePosition = .imageOnly
+        imageScaling = .scaleNone
+        toolTip = tip
+        setAccessibilityLabel(tip)
+        target = self
+        action = #selector(pressed)
+        NSLayoutConstraint.activate([
+            widthAnchor.constraint(equalToConstant: 38),
+            heightAnchor.constraint(equalToConstant: 24),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("not supported") }
+
+    @objc private func pressed() { onPress(self) }
 }
