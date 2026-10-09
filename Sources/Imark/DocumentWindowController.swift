@@ -808,7 +808,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, NSMe
     @objc func openInEditor(_ sender: NSMenuItem) {
         guard let editor = sender.representedObject as? URL else { return NSSound.beep() }
         Editors.open(url, with: editor)
-        buildToolbar()   // the button now wears the icon of what you just chose
     }
 
     // MARK: - NSWindowDelegate

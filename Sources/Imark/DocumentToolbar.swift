@@ -170,11 +170,10 @@ extension DocumentWindowController: NSToolbarDelegate {
             // split button — face for the editor used last, chevron for the
             // rest — and the toolbar draws a menu item as a group of its own,
             // apart from the row beside it. A custom view, the way Appearance
-            // is, stays in the row.
-            let preferred = Editors.preferred(from: Editors.installed(for: url))
-            let image = preferred.map(icon(for:))
-                ?? NSImage(systemSymbolName: "square.and.pencil", accessibilityDescription: "Open in")
-            image?.size = NSSize(width: 16, height: 16)
+            // is, stays in the row. The generic application icon rather than
+            // the last editor's: the button opens a list, not one app.
+            let image = NSWorkspace.shared.icon(for: .applicationBundle)
+            image.size = NSSize(width: 16, height: 16)
             let button = MenuToolbarButton(image: image, tip: "Open in another app") { [weak self] button in
                 guard let self else { return }
                 self.editorsMenu().popUp(
@@ -274,6 +273,9 @@ extension DocumentWindowController: NSToolbarDelegate {
             let item = NSMenuItem(title: editor.name, action: #selector(openInEditor(_:)), keyEquivalent: "")
             item.representedObject = editor.url
             item.image = icon(for: editor.url)
+            // The one picked last, here or in Settings, ticked the way a menu
+            // marks the current choice — the button itself shows no one app.
+            item.state = editor.url.path == Settings.preferredEditor?.path ? .on : .off
             item.target = self
             menu.addItem(item)
         }
