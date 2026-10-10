@@ -170,10 +170,11 @@ extension DocumentWindowController: NSToolbarDelegate {
             // split button — face for the editor used last, chevron for the
             // rest — and the toolbar draws a menu item as a group of its own,
             // apart from the row beside it. A custom view, the way Appearance
-            // is, stays in the row. The generic application icon rather than
-            // the last editor's: the button opens a list, not one app.
-            let image = NSWorkspace.shared.icon(for: .applicationBundle)
-            image.size = NSSize(width: 16, height: 16)
+            // is, stays in the row. A glyph rather than the last editor's icon:
+            // the button opens a list, not one app, and a colour icon was the
+            // one thing in the row that was not monochrome.
+            let image = NSImage(systemSymbolName: "square.grid.3x3", accessibilityDescription: "Open in")?
+                .withSymbolConfiguration(.init(pointSize: 14, weight: .regular))
             let button = MenuToolbarButton(image: image, tip: "Open in another app") { [weak self] button in
                 guard let self else { return }
                 self.editorsMenu().popUp(
